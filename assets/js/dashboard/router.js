@@ -20,6 +20,8 @@ import ConversionsModal from './stats/modals/conversions'
 import FilterModal from './stats/modals/filter-modal'
 import QueryContextProvider from './query-context'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { DashboardKeybinds } from './dashboard-keybinds'
+import { KeybindsContextProvider } from './keybinding'
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -31,13 +33,15 @@ const queryClient = new QueryClient({
 
 function DashboardElement() {
   return (
-    <QueryClientProvider client={queryClient}>
-      <QueryContextProvider>
-        <Dashboard />
-        {/** render any children of the root route below */}
-        <Outlet />
-      </QueryContextProvider>
-    </QueryClientProvider>
+    <KeybindsContextProvider>
+      <QueryClientProvider client={queryClient}>
+        <QueryContextProvider>
+          <Dashboard />
+          {/** render any children of the root route below */}
+          <Outlet />
+        </QueryContextProvider>
+      </QueryClientProvider>
+    </KeybindsContextProvider>
   )
 }
 
@@ -166,6 +170,7 @@ export function createAppRouter(site) {
       {
         ...rootRoute,
         children: [
+          { index: true, element: <DashboardKeybinds /> },
           sourcesRoute,
           utmMediumsRoute,
           utmSourcesRoute,

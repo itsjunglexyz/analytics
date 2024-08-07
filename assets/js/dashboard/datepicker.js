@@ -1,454 +1,354 @@
-import React, { Fragment, useState, useEffect, useCallback, useRef } from "react";
-import { useAppNavigate } from "./navigation/use-app-navigate";
-import Flatpickr from "react-flatpickr";
-import { ChevronDownIcon } from '@heroicons/react/20/solid';
-import { Transition } from '@headlessui/react';
+/* @format */
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react'
+import { ChevronDownIcon } from '@heroicons/react/20/solid'
+import { Transition } from '@headlessui/react'
 import {
-  shiftDays,
-  shiftMonths,
   formatDay,
   formatMonthYYYY,
   formatYear,
-  formatISO,
   isToday,
-  lastMonth,
-  nowForSite,
-  isSameMonth,
   isThisMonth,
   isThisYear,
-  parseUTCDate,
-  parseNaiveDate,
-  isBefore,
-  isAfter,
   formatDateRange,
-  yesterday,
-  isSameDate
-} from "./util/date";
-import { navigateToQuery, QueryLink, QueryButton } from "./query";
-import { shouldIgnoreKeypress } from "./keybinding.js";
-import { COMPARISON_DISABLED_PERIODS, toggleComparisons, isComparisonEnabled } from "../dashboard/comparison-input.js";
-import classNames from "classnames";
-import { useQueryContext } from "./query-context.js";
-import { useSiteContext } from "./site-context.js";
+  parseNaiveDate,
+  formatISO
+} from './util/date'
+import {
+  shiftQueryPeriod,
+  getDateForShiftedPeriod,
+  navigateToQuery
+} from './query'
+import {
+  COMPARISON_DISABLED_PERIODS,
+  isComparisonEnabled,
+} from '../dashboard/comparison-input.js'
+import classNames from 'classnames'
+import { useQueryContext } from './query-context.js'
+import { useSiteContext } from './site-context.js'
+import { KeybindHint, NavigateKeybind } from './keybinding.js'
+import {
+  AppNavigationLink,
+  useAppNavigate
+} from './navigation/use-app-navigate.js'
+import { DateRangeCalendar } from './datepicker-calendar.js'
+import {
+  getComparisonSearch,
+  useSelectableDatePeriodGroups
+} from './query-time-periods.js'
 
-function KeyBindHint({children}) {
+export const ArrowKeybind = ({ keyboardKey }) => {
+  const site = useSiteContext()
+  const { query } = useQueryContext()
+
+  const search = useMemo(
+    () =>
+      shiftQueryPeriod({
+        query,
+        site,
+        direction: { ArrowLeft: -1, ArrowRight: 1 }[keyboardKey],
+        keybindHint: keyboardKey
+      }),
+    [site, query, keyboardKey]
+  )
+
   return (
-    <kbd className="rounded border border-gray-200 px-2 font-mono font-normal text-xs text-gray-400">{children}</kbd>
+    <NavigateKeybind
+      type="keydown"
+      keyboardKey={keyboardKey}
+      navigateProps={{ search }}
+    />
   )
 }
 
-function renderArrow(query, site, period, prevDate, nextDate) {
-  const insertionDate = parseUTCDate(site.statsBegin);
-  const disabledLeft = isBefore(
-    parseUTCDate(prevDate),
-    insertionDate,
-    period
-  );
-  const disabledRight = isAfter(
-    parseUTCDate(nextDate),
-    nowForSite(site),
-    period
-  );
-
-  const isComparing = isComparisonEnabled(query.comparison)
-
-  const leftClass = classNames("flex items-center px-1 sm:px-2 border-r border-gray-300 rounded-l dark:border-gray-500 dark:text-gray-100", {
-    "bg-gray-300 dark:bg-gray-950": disabledLeft,
-    "hover:bg-gray-100 dark:hover:bg-gray-900": !disabledLeft,
-  })
-
-  const rightClass = classNames("flex items-center px-1 sm:px-2 rounded-r dark:text-gray-100", {
-    "bg-gray-300 dark:bg-gray-950": disabledRight,
-    "hover:bg-gray-100 dark:hover:bg-gray-900": !disabledRight,
-  })
-
-  const containerClass = classNames("rounded shadow bg-white mr-2 sm:mr-4 cursor-pointer dark:bg-gray-800", {
-    "hidden md:flex": isComparing,
-    "flex": !isComparing,
-  })
-
+function ArrowIcon({ direction }) {
   return (
-    <div className={containerClass}>
-      <QueryButton
-        search={{ date: prevDate }}
-        className={leftClass}
-        disabled={disabledLeft}
-      >
-        <svg
-          className="feather h-4 w-4"
-          xmlns="http://www.w3.org/2000/svg"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        >
-          <polyline points="15 18 9 12 15 6"></polyline>
-        </svg>
-      </QueryButton>
-      <QueryButton
-        search={{ date: nextDate }}
-        className={rightClass}
-        disabled={disabledRight}
-      >
-        <svg
-          className="feather h-4 w-4"
-          xmlns="http://www.w3.org/2000/svg"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        >
-          <polyline points="9 18 15 12 9 6"></polyline>
-        </svg>
-      </QueryButton>
-    </div>
-  );
+    <svg
+      className="feather h-4 w-4"
+      xmlns="http://www.w3.org/2000/svg"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      {direction === 'left' && <polyline points="15 18 9 12 15 6"></polyline>}
+      {direction === 'right' && <polyline points="9 18 15 12 9 6"></polyline>}
+    </svg>
+  )
 }
 
 function DatePickerArrows() {
-  const { query } = useQueryContext();
-  const site = useSiteContext();
-  if (query.period === "year") {
-    const prevDate = formatISO(shiftMonths(query.date, -12));
-    const nextDate = formatISO(shiftMonths(query.date, 12));
-
-    return renderArrow(query, site, "year", prevDate, nextDate);
-  } else if (query.period === "month") {
-    const prevDate = formatISO(shiftMonths(query.date, -1));
-    const nextDate = formatISO(shiftMonths(query.date, 1));
-
-    return renderArrow(query, site, "month", prevDate, nextDate);
-  } else if (query.period === "day") {
-    const prevDate = formatISO(shiftDays(query.date, -1));
-    const nextDate = formatISO(shiftDays(query.date, 1));
-
-    return renderArrow(query, site, "day", prevDate, nextDate);
+  const { query } = useQueryContext()
+  const site = useSiteContext()
+  if (!['year', 'month', 'day'].includes(query.period)) {
+    return null
   }
 
-  return null
+  const canGoBack =
+    getDateForShiftedPeriod({ site, query, direction: -1 }) !== null
+  const canGoForward =
+    getDateForShiftedPeriod({ site, query, direction: 1 }) !== null
+
+  const isComparing = isComparisonEnabled(query.comparison)
+
+  const sharedClass = 'flex items-center px-1 sm:px-2 dark:text-gray-100'
+  const enabledClass = 'hover:bg-gray-100 dark:hover:bg-gray-900'
+  const disabledClass = 'bg-gray-300 dark:bg-gray-950 cursor-not-allowed'
+
+  const containerClass = classNames(
+    'rounded shadow bg-white mr-2 sm:mr-4 cursor-pointer dark:bg-gray-800',
+    {
+      'hidden md:flex': isComparing,
+      flex: !isComparing
+    }
+  )
+
+  return (
+    <div className={containerClass}>
+      <AppNavigationLink
+        className={classNames(
+          sharedClass,
+          'rounded-l border-gray-300 dark:border-gray-500',
+          { [enabledClass]: canGoBack, [disabledClass]: !canGoBack }
+        )}
+        disabled={!canGoBack}
+        search={shiftQueryPeriod({ site, query, direction: -1 })}
+      >
+        <ArrowIcon direction="left" />
+      </AppNavigationLink>
+      <AppNavigationLink
+        className={classNames(sharedClass, {
+          [enabledClass]: canGoForward,
+          [disabledClass]: !canGoForward
+        })}
+        disabled={!canGoForward}
+        search={shiftQueryPeriod({ site, query, direction: 1 })}
+      >
+        <ArrowIcon direction="right" />
+      </AppNavigationLink>
+    </div>
+  )
 }
 
 function DisplayPeriod() {
-  const { query } = useQueryContext();
-  const site = useSiteContext();
-  if (query.period === "day") {
+  const { query } = useQueryContext()
+  const site = useSiteContext()
+  if (query.period === 'day') {
     if (isToday(site, query.date)) {
-      return "Today";
+      return 'Today'
     }
-    return formatDay(query.date);
-  } if (query.period === '7d') {
+    return formatDay(query.date)
+  }
+  if (query.period === '7d') {
     return 'Last 7 days'
-  } if (query.period === '30d') {
+  }
+  if (query.period === '30d') {
     return 'Last 30 days'
-  } if (query.period === 'month') {
+  }
+  if (query.period === 'month') {
     if (isThisMonth(site, query.date)) {
       return 'Month to Date'
     }
     return formatMonthYYYY(query.date)
-  } if (query.period === '6mo') {
+  }
+  if (query.period === '6mo') {
     return 'Last 6 months'
-  } if (query.period === '12mo') {
+  }
+  if (query.period === '12mo') {
     return 'Last 12 months'
-  } if (query.period === 'year') {
+  }
+  if (query.period === 'year') {
     if (isThisYear(site, query.date)) {
       return 'Year to Date'
     }
     return formatYear(query.date)
-  } if (query.period === 'all') {
+  }
+  if (query.period === 'all') {
     return 'All time'
-  } if (query.period === 'custom') {
+  }
+  if (query.period === 'custom') {
     return formatDateRange(site, query.from, query.to)
   }
   return 'Realtime'
 }
 
 function DatePicker() {
-  const { query } = useQueryContext();
-  const site = useSiteContext();
-  const [open, setOpen] = useState(false)
-  const [mode, setMode] = useState('menu')
+  const { query, otherSearch } = useQueryContext()
+  const site = useSiteContext()
+  const [isOpen, setOpen] = useState(false)
   const dropDownNode = useRef(null)
-  const calendar = useRef(null)
-  const navigate = useAppNavigate();
+  const namedSelectablePeriodGroups = useSelectableDatePeriodGroups()
 
-  const handleKeydown = useCallback((e) => {
-    if (shouldIgnoreKeypress(e)) return true
-
-    const newSearch = {
-      period: null,
-      from: null,
-      to: null,
-      date: null
-    };
-
-    const insertionDate = parseUTCDate(site.statsBegin);
-
-    if (e.key === "ArrowLeft") {
-      const prevDate = formatISO(shiftDays(query.date, -1));
-      const prevMonth = formatISO(shiftMonths(query.date, -1));
-      const prevYear = formatISO(shiftMonths(query.date, -12));
-
-      if (query.period === "day" && !isBefore(parseUTCDate(prevDate), insertionDate, query.period)) {
-        newSearch.period = "day";
-        newSearch.date = prevDate;
-      } else if (query.period === "month" && !isBefore(parseUTCDate(prevMonth), insertionDate, query.period)) {
-        newSearch.period = "month";
-        newSearch.date = prevMonth;
-      } else if (query.period === "year" && !isBefore(parseUTCDate(prevYear), insertionDate, query.period)) {
-        newSearch.period = "year";
-        newSearch.date = prevYear;
-      }
-    } else if (e.key === "ArrowRight") {
-      const now = nowForSite(site)
-      const nextDate = formatISO(shiftDays(query.date, 1));
-      const nextMonth = formatISO(shiftMonths(query.date, 1));
-      const nextYear = formatISO(shiftMonths(query.date, 12));
-
-      if (query.period === "day" && !isAfter(parseUTCDate(nextDate), now, query.period)) {
-        newSearch.period = "day";
-        newSearch.date = nextDate;
-      } else if (query.period === "month" && !isAfter(parseUTCDate(nextMonth), now, query.period)) {
-        newSearch.period = "month";
-        newSearch.date = nextMonth;
-      } else if (query.period === "year" && !isAfter(parseUTCDate(nextYear), now, query.period)) {
-        newSearch.period = "year";
-        newSearch.date = nextYear;
-      }
-    }
-
-    setOpen(false);
-
-    const keybindings = {
-      d: { date: null, period: 'day' },
-      e: { date: formatISO(shiftDays(nowForSite(site), -1)), period: 'day' },
-      r: { period: 'realtime' },
-      w: { date: null, period: '7d' },
-      m: { date: null, period: 'month' },
-      y: { date: null, period: 'year' },
-      t: { date: null, period: '30d' },
-      s: { date: null, period: '6mo' },
-      l: { date: null, period: '12mo' },
-      a: { date: null, period: 'all' },
-    }
-
-    const redirect = keybindings[e.key.toLowerCase()]
-    if (redirect) {
-      navigateToQuery(navigate, query, { ...newSearch, ...redirect, keybindHint: e.key.toUpperCase() })
-    } else if (e.key.toLowerCase() === 'x') {
-      toggleComparisons(navigate, query, site)
-    } else if (e.key.toLowerCase() === 'c') {
-      setOpen(true)
-      setMode('calendar')
-    } else if (newSearch.date) {
-      navigateToQuery(navigate, query, newSearch);
-    }
-  }, [query])
-
-  const handleClick = useCallback((e) => {
-    if (dropDownNode.current && dropDownNode.current.contains(e.target)) return;
-
+  useEffect(() => {
     setOpen(false)
-  })
+  }, [query, otherSearch.calendar])
 
-  useEffect(() => {
-    if (mode === 'calendar' && open) {
-      openCalendar()
+  const onClickOutsideClose = useCallback((e) => {
+    if (dropDownNode.current && dropDownNode.current.contains(e.target)) {
+      return
     }
-  }, [mode])
-
-  useEffect(() => {
-    document.addEventListener("keydown", handleKeydown);
-    return () => { document.removeEventListener("keydown", handleKeydown); }
-  }, [handleKeydown])
-
-  useEffect(() => {
-    document.addEventListener("mousedown", handleClick, false);
-    return () => { document.removeEventListener("mousedown", handleClick, false); }
+    setOpen(false)
   }, [])
 
-  function setCustomDate([from, to], _dateStr, _instance) {
-    if (from && to) {
-      [from, to] = [parseNaiveDate(from), parseNaiveDate(to)]
-
-      if (from.isSame(to)) {
-        navigateToQuery(navigate, query, { period: 'day', date: formatISO(from), from: null, to: null })
-      } else {
-        navigateToQuery(navigate, query, { period: 'custom', date: null, from: formatISO(from), to: formatISO(to) })
-      }
+  useEffect(() => {
+    document.addEventListener('mousedown', onClickOutsideClose, false)
+    return () => {
+      document.removeEventListener('mousedown', onClickOutsideClose, false)
     }
+  }, [onClickOutsideClose])
 
-    setOpen(false)
-  }
+  const flexRowClass = 'flex items-center justify-between'
+  const linkClass = `px-4 py-2 text-sm leading-tight hover:bg-gray-100 hover:text-gray-900 dark:hover:bg-gray-900 dark:hover:text-gray-100`
 
-  function toggle() {
-    const newMode = mode === 'calendar' && !open ? 'menu' : mode
-    setOpen(!open)
-    setMode(newMode)
-  }
-
-  function openCalendar() {
-    calendar.current && calendar.current.flatpickr.open();
-  }
-
-  function renderLink(period, text, opts = {}) {
-    let boldClass;
-    if (query.period === "day" && period === "day") {
-      boldClass = isSameDate(opts.date, query.date) ? "font-bold" : "";
-    } else if (query.period === "month" && period === "month") {
-      const linkDate = opts.date || nowForSite(site);
-      boldClass = isSameMonth(linkDate, query.date) ? "font-bold" : "";
-    } else {
-      boldClass = query.period === period ? "font-bold" : "";
-    }
-
-    opts.date = opts.date ? formatISO(opts.date) : null;
-
-    return (
-      <QueryLink
-        search={{ from: null, to: null, period, ...opts }}
-        onClick={() => setOpen(false)}
-        className={`${boldClass} px-4 py-2 text-sm leading-tight hover:bg-gray-100 hover:text-gray-900
-          dark:hover:bg-gray-900 dark:hover:text-gray-100 flex items-center justify-between`}
-      >
-        {text}
-
-        {opts.keybindHint ? (<KeyBindHint>{opts.keybindHint}</KeyBindHint>) : null}
-      </QueryLink>
-    );
-  }
-
-  function renderDropDownContent() {
-    if (mode === "menu") {
-      return (
-        <div
-          id="datemenu"
-          className="absolute w-full left-0 right-0 md:w-56 md:absolute md:top-auto md:left-auto md:right-0 mt-2 origin-top-right z-10"
-        >
-          <div
-            className="rounded-md shadow-lg  bg-white dark:bg-gray-800 ring-1 ring-black ring-opacity-5
-            font-medium text-gray-800 dark:text-gray-200 date-options"
-          >
-            <div className="py-1 border-b border-gray-200 dark:border-gray-500 date-option-group">
-              {renderLink("day", "Today", { keybindHint: 'D', date: nowForSite(site) })}
-              {renderLink("day", "Yesterday", { keybindHint: 'E', date: yesterday(site) })}
-              {renderLink("realtime", "Realtime", { keybindHint: 'R' })}
-            </div>
-            <div className="py-1 border-b border-gray-200 dark:border-gray-500 date-option-group">
-              {renderLink("7d", "Last 7 Days", { keybindHint: 'W' })}
-              {renderLink("30d", "Last 30 Days", { keybindHint: 'T' })}
-            </div>
-            <div className="py-1 border-b border-gray-200 dark:border-gray-500 date-option-group">
-              {renderLink('month', 'Month to Date', { keybindHint: 'M' })}
-              {renderLink('month', 'Last Month', { date: lastMonth(site) })}
-            </div>
-            <div className="py-1 border-b border-gray-200 dark:border-gray-500 date-option-group">
-              {renderLink("year", "Year to Date", { keybindHint: 'Y' })}
-              {renderLink("12mo", "Last 12 months", { keybindHint: 'L' })}
-            </div>
-            <div className="py-1 date-option-group">
-              {renderLink("all", "All time", { keybindHint: 'A' })}
-              <span
-                onClick={() => setMode('calendar')}
-                onKeyPress={() => setMode('calendar')}
-                className="px-4 py-2 text-sm leading-tight hover:bg-gray-100
-                  dark:hover:bg-gray-900 hover:text-gray-900 dark:hover:text-gray-100
-                  cursor-pointer flex items-center justify-between"
-                tabIndex="0"
-                role="button"
-                aria-haspopup="true"
-                aria-expanded="false"
-                aria-controls="calendar"
-              >
-                Custom Range
-                <KeyBindHint>C</KeyBindHint>
-              </span>
-            </div>
-            {!COMPARISON_DISABLED_PERIODS.includes(query.period) &&
-              <div className="py-1 date-option-group border-t border-gray-200 dark:border-gray-500">
-                <span
-                  onClick={() => {
-                    toggleComparisons(navigate, query, site)
-                    setOpen(false)
-                  }}
-                  className="px-4 py-2 text-sm leading-tight hover:bg-gray-100 dark:hover:bg-gray-900 hover:text-gray-900 dark:hover:text-gray-100 cursor-pointer flex items-center justify-between">
-                  {isComparisonEnabled(query.comparison) ? 'Disable comparison' : 'Compare'}
-                  <KeyBindHint>X</KeyBindHint>
-                </span>
-              </div>}
-          </div>
-        </div>
-      );
-    } if (mode === "calendar") {
-      return (
-        <div className="h-0">
-          <Flatpickr
-            id="calendar"
-            options={{
-              mode: 'range',
-              maxDate: 'today',
-              minDate: site.statsBegin,
-              showMonths: 1,
-              static: true,
-              animate: true
-            }}
-            ref={calendar}
-            className="invisible"
-            onClose={setCustomDate}
-          />
-        </div>
-      )
-    }
-  }
-
-  function renderPicker() {
-    return (
+  return (
+    <div className="min-w-32 md:w-48 md:relative" ref={dropDownNode}>
       <div
-        className="min-w-32 md:w-48 md:relative"
-        ref={dropDownNode}
-      >
-        <div
-          onClick={toggle}
-          className="flex items-center justify-between rounded bg-white dark:bg-gray-800 shadow px-2 md:px-3
+        onClick={() => setOpen((currentState) => !currentState)}
+        className="flex items-center justify-between rounded bg-white dark:bg-gray-800 shadow px-2 md:px-3
           py-2 leading-tight cursor-pointer text-xs md:text-sm text-gray-800
           dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-900"
-          tabIndex="0"
-          role="button"
-          aria-haspopup="true"
-          aria-expanded="false"
-          aria-controls="datemenu"
-        >
-          <span className="truncate mr-1 md:mr-2">
-            <span className="font-medium"><DisplayPeriod /></span>
+        tabIndex="0"
+        role="button"
+        aria-haspopup="true"
+        aria-expanded="false"
+        aria-controls="datemenu"
+      >
+        <span className="truncate mr-1 md:mr-2">
+          <span className="font-medium">
+            <DisplayPeriod />
           </span>
-          <ChevronDownIcon className="hidden sm:inline-block h-4 w-4 md:h-5 md:w-5 text-gray-500" />
-        </div>
-
-        <Transition
-          show={open}
-          as={Fragment}
-          enter="transition ease-out duration-100"
-          enterFrom="opacity-0 scale-95"
-          enterTo="opacity-100 scale-100"
-          leave="transition ease-in duration-75"
-          leaveFrom="opacity-100 scale-100"
-          leaveTo="opacity-0 scale-95"
-        >
-          {renderDropDownContent()}
-        </Transition>
+        </span>
+        <ChevronDownIcon className="hidden sm:inline-block h-4 w-4 md:h-5 md:w-5 text-gray-500" />
       </div>
-    );
+      <Transition
+        show={isOpen}
+        enter="transition ease-out duration-100"
+        enterFrom="opacity-0 scale-95"
+        enterTo="opacity-100 scale-100"
+        leave="transition ease-in duration-75"
+        leaveFrom="opacity-100 scale-100"
+        leaveTo="opacity-0 scale-95"
+      >
+        {isOpen && (
+          <div
+            id="datemenu"
+            className="absolute w-full left-0 right-0 md:w-56 md:absolute md:top-auto md:left-auto md:right-0 mt-2 origin-top-right z-10"
+          >
+            <div
+              className="rounded-md shadow-lg bg-white dark:bg-gray-800 ring-1 ring-black ring-opacity-5
+            font-medium text-gray-800 dark:text-gray-200 date-options"
+            >
+              {namedSelectablePeriodGroups.map((group, index) => (
+                <div
+                  key={index}
+                  className={classNames(
+                    'py-1 date-option-group border-gray-200 dark:border-gray-500 border-b last:border-none'
+                  )}
+                >
+                  {group.map(({ navigation, keybind, button }) => (
+                    <AppNavigationLink
+                      key={button.label}
+                      search={navigation.search}
+                      className={classNames(flexRowClass, linkClass, {
+                        'font-bold': navigation.isActive({ query })
+                      })}
+                    >
+                      {button.label}
+                      {!!keybind && (
+                        <KeybindHint>{keybind.keyboardKey}</KeybindHint>
+                      )}
+                    </AppNavigationLink>
+                  ))}
+                </div>
+              ))}
+              {!COMPARISON_DISABLED_PERIODS.includes(query.period) && (
+                <div
+                  className={classNames(
+                    'py-1 date-option-group border-gray-200 dark:border-gray-500 border-b last:border-none'
+                  )}
+                >
+                  <AppNavigationLink
+                    className={classNames(flexRowClass, linkClass)}
+                    search={getComparisonSearch({ site, query })}
+                  >
+                    {isComparisonEnabled(query.comparison)
+                      ? 'Disable comparison'
+                      : 'Compare'}
+                    <KeybindHint>X</KeybindHint>
+                  </AppNavigationLink>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+      </Transition>
+    </div>
+  )
+}
+
+export default function N() {
+  const site = useSiteContext()
+  const { query, otherSearch } = useQueryContext()
+  const visible = otherSearch.calendar === 'open'
+  const navigate = useAppNavigate()
+
+  const onCloseApplyPeriodIfPossible = ([selectionStart, selectionEnd]) => {
+    if (!selectionStart || !selectionEnd) {
+      return navigate({
+        search: (search) => ({ ...search, calendar: null })
+      })
+    }
+    const [from, to] = [
+      parseNaiveDate(selectionStart),
+      parseNaiveDate(selectionEnd)
+    ]
+    const singleDaySelected = from.isSame(to, 'day')
+
+    if (singleDaySelected) {
+      return navigateToQuery(navigate, query, {
+        period: 'day',
+        date: formatISO(from),
+        from: null,
+        to: null,
+        calendar: null,
+        keybindHint: null
+      })
+    }
+
+    return navigateToQuery(navigate, query, {
+      period: 'custom',
+      date: null,
+      from: formatISO(from),
+      to: formatISO(to),
+      calendar: null,
+      keybindHint: null
+    })
   }
 
   return (
     <div className="flex ml-auto pl-2">
       <DatePickerArrows />
-      {renderPicker()}
+      <DatePicker />
+      <Transition
+        show={visible}
+        enter="transition ease-out duration-100"
+        enterFrom="opacity-0 scale-95"
+        enterTo="opacity-100 scale-100"
+        leave="transition ease-in duration-75"
+        leaveFrom="opacity-100 scale-100"
+        leaveTo="opacity-0 scale-95"
+      >
+        <DateRangeCalendar
+          onClose={onCloseApplyPeriodIfPossible}
+          minDate={site.statsBegin}
+          defaultDates={
+            query.to && query.from
+              ? [formatISO(query.from), formatISO(query.to)]
+              : undefined
+          }
+        />
+      </Transition>
     </div>
   )
 }
-
-export default DatePicker

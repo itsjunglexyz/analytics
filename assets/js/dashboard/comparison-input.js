@@ -17,7 +17,7 @@ const COMPARISON_MODES = {
   'custom': 'Custom period',
 }
 
-const DEFAULT_COMPARISON_MODE = 'previous_period'
+export const DEFAULT_COMPARISON_MODE = 'previous_period'
 
 export const COMPARISON_DISABLED_PERIODS = ['realtime', 'all']
 
@@ -49,7 +49,7 @@ export const getStoredComparisonMode = function (domain, fallbackValue) {
   return fallbackValue
 }
 
-const storeComparisonMode = function (domain, mode) {
+export const storeComparisonMode = function (domain, mode) {
   if (mode == "custom") return
   storage.setItem(getComparisonModeStorageKey(domain), mode)
 }

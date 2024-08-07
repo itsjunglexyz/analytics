@@ -10,6 +10,7 @@ import { hasGoalFilter } from '../../util/filters';
 import { useQueryContext } from '../../query-context';
 import { useSiteContext } from '../../site-context';
 import { entryPagesRoute, exitPagesRoute, topPagesRoute } from '../../router';
+import { preserveValuableSearchParams } from '../../navigation/use-app-navigate';
 
 function EntryPages({ afterFetchData }) {
   const { query } = useQueryContext();
@@ -43,7 +44,7 @@ function EntryPages({ afterFetchData }) {
       getFilterFor={getFilterFor}
       keyLabel="Entry page"
       metrics={chooseMetrics()}
-      detailsLinkProps={{ path: entryPagesRoute.path, search: (search) => search }}
+      detailsLinkProps={{ path: entryPagesRoute.path, search: preserveValuableSearchParams }}
       externalLinkDest={externalLinkDest}
       color="bg-orange-50"
     />

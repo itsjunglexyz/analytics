@@ -6,12 +6,9 @@ const getNavigateToOptions = (
   currentSearchString,
   { path, params, search }
 ) => {
-  const searchRecord = parseSearch(currentSearchString)
-  const updatedSearchRecord = search && search(searchRecord)
-  const updatedPath = path && generatePath(path, params)
   return {
-    pathname: updatedPath,
-    search: updatedSearchRecord && stringifySearch(updatedSearchRecord)
+    pathname: path ? generatePath(path, params) : undefined,
+    search: search ? stringifySearch(search(parseSearch(currentSearchString))) : undefined
   }
 }
 
@@ -61,5 +58,7 @@ export const AppNavigationLink = forwardRef(
     )
   }
 )
+
+export const preserveValuableSearchParams = ({keybindHint: _, ...search}) => search
 
 AppNavigationLink.displayName = 'AppNavigationLink'

@@ -1,59 +1,12 @@
-import React, {useCallback} from 'react'
 import { parseSearch, stringifySearch } from './util/url'
-import { AppNavigationLink, useAppNavigate } from './navigation/use-app-navigate'
-import { nowForSite } from './util/date'
-import * as storage from './util/storage'
-import { COMPARISON_DISABLED_PERIODS, getStoredComparisonMode, isComparisonEnabled, getStoredMatchDayOfWeek } from './comparison-input'
+import { nowForSite, formatISO, shiftDays, shiftMonths, isBefore, parseUTCDate, isAfter } from './util/date'
 import { getFiltersByKeyPrefix, parseLegacyFilter, parseLegacyPropsFilter } from './util/filters'
-
-import dayjs from 'dayjs'
-import utc from 'dayjs/plugin/utc'
-import { useQueryContext } from './query-context'
-
-dayjs.extend(utc)
-
-const PERIODS = ['realtime', 'day', 'month', '7d', '30d', '6mo', '12mo', 'year', 'all', 'custom']
-
-export function parseQuery(searchRecord, site) {
-  const getValue = (k) => searchRecord[k];
-  let period = getValue('period')
-  const periodKey = `period__${site.domain}`
-
-  if (PERIODS.includes(period)) {
-    if (period !== 'custom' && period !== 'realtime') {storage.setItem(periodKey, period)}
-  } else if (storage.getItem(periodKey)) {
-    period = storage.getItem(periodKey)
-  } else {
-    period = '30d'
-  }
-
-  let comparison = getValue('comparison') ?? getStoredComparisonMode(site.domain, null)
-  if (COMPARISON_DISABLED_PERIODS.includes(period) || !isComparisonEnabled(comparison)) comparison = null
-
-  let matchDayOfWeek = getValue('match_day_of_week') ?? getStoredMatchDayOfWeek(site.domain, true)
-
-  return {
-    period,
-    comparison,
-    compare_from: getValue('compare_from') ? dayjs.utc(getValue('compare_from')) : undefined,
-    compare_to: getValue('compare_to') ? dayjs.utc(getValue('compare_to')) : undefined,
-    date: getValue('date') ? dayjs.utc(getValue('date')) : nowForSite(site),
-    from: getValue('from') ? dayjs.utc(getValue('from')) : undefined,
-    to: getValue('to') ? dayjs.utc(getValue('to')) : undefined,
-    match_day_of_week: matchDayOfWeek === true,
-    with_imported: getValue('with_imported') ?? true,
-    filters: getValue('filters') || [],
-    labels: getValue('labels') || {}
-  }
-}
 
 export function addFilter(query, filter) {
   return { ...query, filters: [...query.filters, filter] }
 }
 
-
-
-export function navigateToQuery(navigate, {period}, newPartialSearchRecord) {
+export function navigateToQuery(navigate, { period }, newPartialSearchRecord) {
   // if we update any data that we store in localstorage, make sure going back in history will
   // revert them
   if (newPartialSearchRecord.period && newPartialSearchRecord.period !== period) {
@@ -92,12 +45,12 @@ const LEGACY_URL_PARAMETERS = {
 export function filtersBackwardsCompatibilityRedirect(windowLocation, windowHistory) {
   const searchRecord = parseSearch(windowLocation.search)
   const getValue = (k) => searchRecord[k];
-  
+
   // New filters are used - no need to do anything
   if (getValue("filters")) {
     return
   }
-  
+
   const changedSearchRecordEntries = [];
   let filters = []
   let labels = {}
@@ -149,51 +102,61 @@ export function revenueAvailable(query, site) {
   return revenueGoalsInFilter.length > 0 && singleCurrency
 }
 
-export function QueryLink({ to, search, className, children, onClick }) {
-  const navigate = useAppNavigate();
-  const { query } = useQueryContext();
-
-  const handleClick = useCallback((e) => {
-    e.preventDefault()
-    navigateToQuery(navigate, query, search)
-    if (onClick) {
-      onClick(e)
-    }
-  }, [navigate, onClick, query, search])
-
-  return (
-    <AppNavigationLink
-      to={to}
-      search={(currentSearch) => ({...currentSearch, ...search})}
-      className={className}
-      onClick={handleClick}
-    >
-      {children}
-    </AppNavigationLink>
-  )
+const clearedDateSearch = {
+  period: null,
+  from: null,
+  to: null,
+  date: null,
+  keybindHint: null,
+  calendar: null,
 }
 
-export function QueryButton({ search, disabled, className, children, onClick }) {
-  const navigate = useAppNavigate();
-  const { query } = useQueryContext();
-
-  const handleClick = useCallback((e) => {
-    e.preventDefault()
-    navigateToQuery(navigate, query, search)
-    if (onClick) {
-      onClick(e)
-    }
-  }, [navigate, onClick, query, search])
-
-  return (
-    <button
-      className={className}
-      onClick={handleClick}
-      type="button"
-      disabled={disabled}
-    >
-      {children}
-    </button>
-  )
+export function isDateOnOrAfterStatsStartDate({ site, date, period }) {
+  return !isBefore(parseUTCDate(date), parseUTCDate(site.statsBegin), period)
 }
 
+export function isDateBeforeOrOnCurrentDate({ site, date, period }) {
+  const currentDate = nowForSite(site)
+  return !isAfter(parseUTCDate(date), currentDate, period)
+}
+
+
+export function getDateForShiftedPeriod({ site, query, direction }) {
+  const isWithinRangeByDirection = {
+    '-1': isDateOnOrAfterStatsStartDate,
+    '1': isDateBeforeOrOnCurrentDate
+  }
+  const shiftByPeriod = {
+    day: { shift: shiftDays, amount: 1 },
+    month: { shift: shiftMonths, amount: 1 },
+    year: { shift: shiftMonths, amount: 12 }
+  }
+  const { shift, amount } = shiftByPeriod[query.period] ?? {};
+  if (shift) {
+    const date = shift(query.date, direction * amount);
+    if (isWithinRangeByDirection[direction]({ site, date, period: query.period })) {
+      return date;
+    }
+  }
+  return null
+}
+
+export function setQueryPeriodAndDate({ period, date, keybindHint } = { date: null, keybindHint: null }) {
+  return function (search) {
+    return ({
+      ...search,
+      ...clearedDateSearch,
+      period,
+      date,
+      keybindHint
+    })
+  }
+};
+
+export function shiftQueryPeriod({ site, query, direction, keybindHint }) {
+  const date = getDateForShiftedPeriod({ site, query, direction })
+  if (date !== null) {
+    return setQueryPeriodAndDate({ period: query.period, date: formatISO(date), keybindHint })
+  }
+  return (search) => search
+};
