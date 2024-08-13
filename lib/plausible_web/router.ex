@@ -313,6 +313,11 @@ defmodule PlausibleWeb.Router do
       live "/sites", Sites, :index, as: :site
     end
 
+    scope alias: Live, assigns: %{connect_live_socket: true} do
+      pipe_through [:focus_layout]
+      live "/onboarding", Onboarding, :index
+    end
+
     get "/sites/new", SiteController, :new
     post "/sites", SiteController, :create_site
     get "/sites/:website/change-domain", SiteController, :change_domain

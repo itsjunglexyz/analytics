@@ -12,11 +12,15 @@ defmodule PlausibleWeb.Live.RegisterForm do
 
   def mount(params, _session, socket) do
     socket =
-      assign_new(socket, :invitation, fn ->
-        if invitation_id = params["invitation_id"] do
-          Repo.get_by(Auth.Invitation, invitation_id: invitation_id)
-        end
-      end)
+      if is_map(params) do
+        assign_new(socket, :invitation, fn ->
+          if invitation_id = params["invitation_id"] do
+            Repo.get_by(Auth.Invitation, invitation_id: invitation_id)
+          end
+        end)
+      else
+        assign(socket, :invitation, nil)
+      end
 
     if socket.assigns.live_action == :register_from_invitation_form and
          socket.assigns.invitation == nil do
@@ -81,7 +85,6 @@ defmodule PlausibleWeb.Live.RegisterForm do
         phx-hook="Metrics"
         phx-change="validate"
         phx-submit="register"
-        phx-trigger-action={@trigger_submit}
         class="w-full max-w-md mx-auto bg-white dark:bg-gray-800 shadow-md rounded px-8 py-6 mb-4 mt-8"
       >
         <input name="_csrf_token" type="hidden" value={Plug.CSRFProtection.get_csrf_token()} />
@@ -312,7 +315,7 @@ defmodule PlausibleWeb.Live.RegisterForm do
           event_name = "Signup#{if socket.assigns.invitation, do: " via invitation"}"
           {:noreply, push_event(socket, "send-metrics", %{event_name: event_name})}
         else
-          {:noreply, assign(socket, trigger_submit: true)}
+          {:noreply, socket}
         end
 
       {:error, changeset} ->
