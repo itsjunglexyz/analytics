@@ -18,25 +18,77 @@
         Please enter the 4-digit code we sent to <b><%= @conn.assigns[:current_user].email %></b>
       </div>
 
-      <div class="mt-12 flex items-stretch flex-grow">
-        <div>
-          <%= text_input(f, :code,
-            class:
-              "tracking-widest font-medium shadow-sm focus:ring-indigo-500 focus:border-indigo-500 block w-36 px-8 border-gray-300 dark:border-gray-500 rounded-l-md dark:text-gray-200 dark:bg-gray-900",
-            oninput:
-              "this.value=this.value.replace(/[^0-9]/g, ''); if (this.value.length >= 4) document.getElementById('submit').focus()",
-            onclick: "this.select();",
-            maxlength: "4",
-            placeholder: "••••",
-            style: "letter-spacing: 10px;",
-            required: "required"
-          ) %>
+      <script>
+        pin = function() {
+        return {
+          pin: [],
+          fire: function(e) {
+            if (this.pin.length == 4) {
+              var pin = this.pin.join("");
+              this.$refs.code.value = pin;
+              this.$refs.submit.click();
+            }
+          },
+          paste: function(e) {
+            const paste = e.clipboardData.getData("text");
+            values = paste.split("");
+            for (var i = 1; i < 5; i++) {
+              this.$refs["pin_" + i].value = values[i - 1];
+            }
+            this.pin = values;
+            this.$refs["pin_4"].focus();
+            this.fire();
+          },
+          type: function(i) {
+            var input = this.$refs["pin_" + i];
+            var next = this.$refs["pin_" + (i + 1)];
+            var prev = this.$refs["pin_" + (i - 1)];
+            if (input.value.length == 1) {
+              this.pin[i - 1] = input.value;
+            }
+            if (input.value.length === 0) {
+              if (prev) {
+              prev.focus();
+              prev.select();
+              }
+            } else if (next) {
+              next.focus();
+              next.select();
+            }
+            this.fire();
+        }
+        }
+        }
+      </script>
+
+      <div class="flex" x-data="pin()">
+        <div :for={i <- 1..4}>
+          <input
+            type="text"
+            id={"pin_#{i}"}
+            name="pin"
+            x-ref={"pin_#{i}"}
+            maxlength="1"
+            class="bg-white py-5 text-4xl unselectable font-bold rounded inline w-12 text-center select-none transition-all"
+            x-on:input={"type(#{i})"}
+            x-on:paste="paste($event)"
+            x-on:click="$event.target.select()"
+            placeholder="0"
+            autofocus={i == 1}
+          />
         </div>
-        <PlausibleWeb.Components.Generic.button id="submit" type="submit" class="rounded-l-none">
+        <%= hidden_input(f, :code, "x-ref": "code") %>
+
+        <PlausibleWeb.Components.Generic.button
+          id="submit"
+          type="submit"
+          class="rounded-l-none"
+          x-ref="submit"
+        >
           Activate &rarr;
         </PlausibleWeb.Components.Generic.button>
+        <%= error_tag(assigns, :error) %>
       </div>
-      <%= error_tag(assigns, :error) %>
 
       <div class="mt-16 text-sm dark:text-gray-100">
         Didn't receive an email?

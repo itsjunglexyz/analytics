@@ -97,6 +97,7 @@ defmodule PlausibleWeb.AuthController do
   end
 
   def activate(conn, %{"code" => code}) do
+    IO.inspect(code)
     user = conn.assigns[:current_user]
 
     has_any_invitations? = Plausible.Site.Memberships.pending?(user.email)
