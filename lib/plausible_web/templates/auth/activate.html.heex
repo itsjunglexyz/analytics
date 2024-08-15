@@ -14,7 +14,7 @@
         <% end %>
       </h2>
 
-      <div class="mt-2 text-sm text-gray-500 dark:text-gray-200 leading-tight">
+      <div class="w-full truncate mt-2 text-normal text-gray-500 dark:text-gray-200 leading-tight mb-6">
         Please enter the 4-digit code we sent to <b><%= @conn.assigns[:current_user].email %></b>
       </div>
 
@@ -26,7 +26,6 @@
             if (this.pin.length == 4) {
               var pin = this.pin.join("");
               this.$refs.code.value = pin;
-              this.$refs.submit.click();
             }
           },
           paste: function(e) {
@@ -61,7 +60,7 @@
         }
       </script>
 
-      <div class="flex" x-data="pin()">
+      <div class="flex mt-4 mb-4" x-data="pin()">
         <div :for={i <- 1..4}>
           <input
             type="text"
@@ -69,28 +68,23 @@
             name="pin"
             x-ref={"pin_#{i}"}
             maxlength="1"
-            class="bg-white py-5 text-4xl unselectable font-bold rounded inline w-12 text-center select-none transition-all"
+            class="bg-white text-normal border-gray-300 w-12 h-12 mr-2 rounded inline transition-all text-center"
             x-on:input={"type(#{i})"}
             x-on:paste="paste($event)"
             x-on:click="$event.target.select()"
-            placeholder="0"
             autofocus={i == 1}
           />
         </div>
         <%= hidden_input(f, :code, "x-ref": "code") %>
-
-        <PlausibleWeb.Components.Generic.button
-          id="submit"
-          type="submit"
-          class="rounded-l-none"
-          x-ref="submit"
-        >
-          Activate &rarr;
-        </PlausibleWeb.Components.Generic.button>
-        <%= error_tag(assigns, :error) %>
       </div>
 
-      <div class="mt-16 text-sm dark:text-gray-100">
+      <%= error_tag(assigns, :error) %>
+
+      <PlausibleWeb.Components.Generic.button id="submit" class="w-full mt-4" type="submit">
+        Activate
+      </PlausibleWeb.Components.Generic.button>
+
+      <div class="mt-8 text-sm dark:text-gray-100">
         Didn't receive an email?
       </div>
       <ol class="list-disc text-xs text-gray-500 leading-tight space-y-1 mt-1">
