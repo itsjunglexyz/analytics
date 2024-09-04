@@ -319,7 +319,7 @@ export default function Funnel({ funnelName, tabs }) {
           <Bar
             count={step.visitors}
             all={funnel.steps}
-            bg={palette.smallBarClass}
+            className={palette.smallBarClass}
             maxWidthDeduction={"5rem"}
             plot={'visitors'}
           >

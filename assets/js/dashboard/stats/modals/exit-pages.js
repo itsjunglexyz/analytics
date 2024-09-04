@@ -7,6 +7,7 @@ import * as metrics from '../reports/metrics'
 import * as url from '../../util/url';
 import { useQueryContext } from "../../query-context";
 import { useSiteContext } from "../../site-context";
+import { SortDirection } from "../../hooks/use-order-by";
 
 function ExitPagesModal() {
   const { query } = useQueryContext();
@@ -16,7 +17,8 @@ function ExitPagesModal() {
     title: 'Exit Pages',
     dimension: 'exit_page',
     endpoint: url.apiPath(site, '/exit-pages'),
-    dimensionLabel: 'Page url'
+    dimensionLabel: 'Page url',
+    defaultOrderBy: []
   }
 
   const getFilterInfo = useCallback((listItem) => {
@@ -34,14 +36,14 @@ function ExitPagesModal() {
     if (hasGoalFilter(query)) {
       return [
         metrics.createTotalVisitors(),
-        metrics.createVisitors({ renderLabel: (_query) => 'Conversions' }),
+        metrics.createVisitors({ renderLabel: (_query) => 'Conversions', width: 'w-32' }),
         metrics.createConversionRate()
       ]
     }
 
     if (query.period === 'realtime') {
       return [
-        metrics.createVisitors({ renderLabel: (_query) => 'Current visitors' })
+        metrics.createVisitors({ renderLabel: (_query) => 'Current visitors', width: 'w-36' })
       ]
     }
 

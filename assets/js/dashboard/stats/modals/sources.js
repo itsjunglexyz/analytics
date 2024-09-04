@@ -7,6 +7,7 @@ import * as url from "../../util/url";
 import { addFilter } from "../../query";
 import { useQueryContext } from "../../query-context";
 import { useSiteContext } from "../../site-context";
+import { SortDirection } from "../../hooks/use-order-by";
 
 const VIEWS = {
   sources: {
@@ -22,19 +23,19 @@ const VIEWS = {
     }
   },
   utm_mediums: {
-    info: { title: 'Top UTM Mediums', dimension: 'utm_medium', endpoint: '/utm_mediums', dimensionLabel: 'UTM Medium' }
+    info: { title: 'Top UTM Mediums', dimension: 'utm_medium', endpoint: '/utm_mediums', dimensionLabel: 'UTM Medium', defaultOrderBy: ["visitors", SortDirection.desc] }
   },
   utm_sources: {
-    info: { title: 'Top UTM Sources', dimension: 'utm_source', endpoint: '/utm_sources', dimensionLabel: 'UTM Source' }
+    info: { title: 'Top UTM Sources', dimension: 'utm_source', endpoint: '/utm_sources', dimensionLabel: 'UTM Source', defaultOrderBy: ["visitors", SortDirection.desc] }
   },
   utm_campaigns: {
-    info: { title: 'Top UTM Campaigns', dimension: 'utm_campaign', endpoint: '/utm_campaigns', dimensionLabel: 'UTM Campaign' }
+    info: { title: 'Top UTM Campaigns', dimension: 'utm_campaign', endpoint: '/utm_campaigns', dimensionLabel: 'UTM Campaign', defaultOrderBy: ["visitors", SortDirection.desc] }
   },
   utm_contents: {
-    info: { title: 'Top UTM Contents', dimension: 'utm_content', endpoint: '/utm_contents', dimensionLabel: 'UTM Content' }
+    info: { title: 'Top UTM Contents', dimension: 'utm_content', endpoint: '/utm_contents', dimensionLabel: 'UTM Content', defaultOrderBy: ["visitors", SortDirection.desc] }
   },
   utm_terms: {
-    info: { title: 'Top UTM Terms', dimension: 'utm_term', endpoint: '/utm_terms', dimensionLabel: 'UTM Term' }
+    info: { title: 'Top UTM Terms', dimension: 'utm_term', endpoint: '/utm_terms', dimensionLabel: 'UTM Term', defaultOrderBy: ["visitors", SortDirection.desc] }
   },
 }
 
@@ -60,14 +61,14 @@ function SourcesModal({ currentView }) {
     if (hasGoalFilter(query)) {
       return [
         metrics.createTotalVisitors(),
-        metrics.createVisitors({ renderLabel: (_query) => 'Conversions' }),
+        metrics.createVisitors({ renderLabel: (_query) => 'Conversions', width: 'w-32' }),
         metrics.createConversionRate()
       ]
     }
 
     if (isRealTimeDashboard(query)) {
       return [
-        metrics.createVisitors({ renderLabel: (_query) => 'Current visitors' })
+        metrics.createVisitors({ renderLabel: (_query) => 'Current visitors', width: 'w-36' })
       ]
     }
 
