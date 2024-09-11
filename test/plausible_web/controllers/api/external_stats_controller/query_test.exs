@@ -3328,6 +3328,10 @@ defmodule PlausibleWeb.Api.ExternalStatsController.QueryTest do
 
       assert json_response(conn1, 200)["meta"]["total_rows"] == 8
 
+      populate_stats(site, [
+        build(:pageview, pathname: "/0")
+      ])
+
       conn2 =
         post(conn, "/api/v2/query", Map.put(query, "pagination", %{"limit" => 3, "offset" => 3}))
 
