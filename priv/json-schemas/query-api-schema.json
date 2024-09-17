@@ -29,7 +29,15 @@
     },
     "filters": {
       "type": "array",
-      "items": { "$ref": "#/definitions/filter_tree" },
+      "items": {
+        "oneOf": [
+          { "$ref": "#/definitions/filter_tree" },
+          {
+            "$ref": "#/definitions/filter_segment",
+            "$comment": "This would be behind FF for both dashboard requests and API v2. This mustn't be present if attempting to use #/properties/filters to validate a saved segment, unless we want to handle nested segments."
+          }
+        ]
+      },
       "description": "How to drill into your data"
     },
     "order_by": {
@@ -131,10 +139,7 @@
           "markdownDescription": "A list of two ISO8601 dates or timestamps to determine the query date range.",
           "examples": [
             ["2024-01-01", "2024-01-31"],
-            [
-              "2024-01-01T00:00:00+03:00",
-              "2024-01-02T12:00:00+03:00"
-            ]
+            ["2024-01-01T00:00:00+03:00", "2024-01-02T12:00:00+03:00"]
           ]
         }
       ]
@@ -289,6 +294,29 @@
         }
       ]
     },
+    "filter_segment": {
+      "type": "array",
+      "additionalItems": false,
+      "minItems": 3,
+      "maxItems": 3,
+      "items": [
+        {
+          "const": "is"
+        },
+        {
+          "const": "segment"
+        },
+        {
+          "type": "array",
+          "additionalItems": false,
+          "minItems": 1,
+          "maxItems": 1,
+          "items": { "type": "integer" },
+          "$comment": "Dashboard supports one segment, but in the API we maybe want to support multiple"
+        }
+      ],
+      "examples": [["is", "segment", [424242]]]
+    },
     "filter_entry": {
       "oneOf": [
         { "$ref": "#/definitions/filter_without_goals" },
@@ -307,7 +335,18 @@
       "additionalItems": false,
       "minItems": 2,
       "maxItems": 2,
-      "items": [{ "const": "not" }, { "$ref": "#/definitions/filter_tree" }]
+      "items": [
+        { "const": "not" },
+        {
+          "oneOf": [
+            { "$ref": "#/definitions/filter_tree" },
+            {
+              "$ref": "#/definitions/filter_segment",
+              "$comment": "maybe, but will only be valid in public API"
+            }
+          ]
+        }
+      ]
     },
     "filter_and_or": {
       "type": "array",
@@ -321,7 +360,12 @@
         },
         {
           "type": "array",
-          "items": { "$ref": "#/definitions/filter_tree" },
+          "items": {
+            "oneOf": [
+              { "$ref": "#/definitions/filter_tree" },
+              { "$ref": "#/definitions/filter_segment", "$comment": "maybe, but will only be valid in public API" }
+            ]
+          },
           "minItems": 1
         }
       ]
