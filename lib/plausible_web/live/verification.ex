@@ -1,7 +1,7 @@
 defmodule PlausibleWeb.Live.Verification do
   @moduledoc """
   LiveView coordinating the site verification process.
-  Onboarding new sites, renders a standalone component. 
+  Onboarding new sites, renders a standalone component.
   Embedded modal variant is available for general site settings.
   """
   use PlausibleWeb, :live_view
@@ -13,7 +13,7 @@ defmodule PlausibleWeb.Live.Verification do
   @slowdown_for_frequent_checking :timer.seconds(5)
 
   def mount(
-        %{"website" => domain} = params,
+        %{"domain" => domain} = params,
         _session,
         socket
       ) do
