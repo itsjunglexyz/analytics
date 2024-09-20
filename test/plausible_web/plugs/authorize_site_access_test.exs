@@ -63,8 +63,8 @@ defmodule PlausibleWeb.Plugs.AuthorizeSiteAccessTest do
 
     conn =
       conn
-      |> bypass_through(PlausibleWeb.Router)
-      |> get("/api/docs/query/schema.json", %{"wrong_key" => site.domain})
+      |> bypass_through(PlausibleWeb.Router, [:api_base])
+      |> get("/", %{"wrong_key" => site.domain})
       |> AuthorizeSiteAccess.call(opts)
 
     assert conn.halted
@@ -81,11 +81,11 @@ defmodule PlausibleWeb.Plugs.AuthorizeSiteAccessTest do
 
     conn =
       conn
-      |> bypass_through(PlausibleWeb.Router)
-      |> get("/api/docs/query/schema.json", %{"some_key" => site.domain})
+      |> bypass_through(PlausibleWeb.Router, [:api_base])
+      |> post("/api/docs/query", %{"some_key" => site.domain})
       |> AuthorizeSiteAccess.call(opts)
 
-    assert conn.status == 200
+    refute conn.halted
     assert conn.assigns.site.id == site.id
   end
 

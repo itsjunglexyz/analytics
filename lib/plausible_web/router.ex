@@ -32,26 +32,22 @@ defmodule PlausibleWeb.Router do
     plug :accepts, ["json"]
   end
 
+  pipeline :api_base do
+    plug :accepts, ["json"]
+    plug :fetch_session
+    plug PlausibleWeb.AuthPlug
+  end
+
   pipeline :api do
-    plug :accepts, ["json"]
-    plug :fetch_session
-    plug PlausibleWeb.AuthPlug
+    plug :api_base
   end
 
-  pipeline :internal_stats_api do
-    plug :accepts, ["json"]
-    plug :fetch_session
-    plug PlausibleWeb.AuthPlug
+  pipeline :stats_internal_api_site_access do
     plug PlausibleWeb.Plugs.AuthorizeSiteAccess
-    plug PlausibleWeb.Plugs.NoRobots
   end
 
-  pipeline :docs_stats_api do
-    plug :accepts, ["json"]
-    plug :fetch_session
-    plug PlausibleWeb.AuthPlug
+  pipeline :docs_internal_api_site_access do
     plug PlausibleWeb.Plugs.AuthorizeSiteAccess, {[:admin, :super_admin, :owner], "site_id"}
-    plug PlausibleWeb.Plugs.NoRobots
   end
 
   pipeline :public_api do
@@ -146,7 +142,7 @@ defmodule PlausibleWeb.Router do
   end
 
   scope "/api/stats", PlausibleWeb.Api do
-    pipe_through :internal_stats_api
+    pipe_through([:api_base, :stats_internal_api_site_access, PlausibleWeb.Plugs.NoRobots])
 
     on_ee do
       get "/:domain/funnels/:id", StatsController, :funnel
@@ -198,7 +194,7 @@ defmodule PlausibleWeb.Router do
     get "/query/schema.json", ExternalQueryApiController, :schema
 
     scope [] do
-      pipe_through :docs_stats_api
+      pipe_through([:api_base, :docs_internal_api_site_access, PlausibleWeb.Plugs.NoRobots])
 
       post "/query", ExternalQueryApiController, :query
     end
