@@ -81,6 +81,9 @@ defmodule Plausible.Stats.Filters.FiltersParser do
            "Invalid visit:country filter, visit:country needs to be a valid 2-letter country code."}
         end
 
+      {"segment", false} when all_integers? ->
+        {:ok, [list]}
+
       {_, true} ->
         {:ok, [list]}
 
@@ -113,6 +116,9 @@ defmodule Plausible.Stats.Filters.FiltersParser do
         else
           {:error, error_message}
         end
+
+      "segment" ->
+        {:ok, filter_key}
 
       _ ->
         {:error, error_message}
