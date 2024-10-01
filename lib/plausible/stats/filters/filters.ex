@@ -103,8 +103,8 @@ defmodule Plausible.Stats.Filters do
     |> Enum.map(fn {[_operator, dimension | _rest], _root, _depth} -> dimension end)
   end
 
-  def filtering_on_dimension?(query, dimension) do
-    dimension in dimensions_used_in_filters(query.filters)
+  def filtering_on_dimension?(filters, dimension) do
+    dimension in dimensions_used_in_filters(filters)
   end
 
   @doc """

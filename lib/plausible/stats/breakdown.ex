@@ -23,6 +23,12 @@ defmodule Plausible.Stats.Breakdown do
     transformed_metrics = transform_metrics(metrics, dimension)
     transformed_order_by = transform_order_by(order_by || [], dimension)
 
+    fake_segments =
+      Enum.into(
+        Enum.map(1..5, fn i -> {i, %{segment_data: %{filters: [["is", "visit:entry_page", ["/docs/#{i}"]]]}}} end),
+        %{}
+      )
+
     query_with_metrics =
       Query.set(
         query,
@@ -37,7 +43,7 @@ defmodule Plausible.Stats.Breakdown do
         # Allow pageview and event metrics to be queried off of sessions table
         legacy_breakdown: true
       )
-      |> QueryOptimizer.optimize()
+      |> QueryOptimizer.optimize(available_segments: fake_segments)
 
     q = SQL.QueryBuilder.build(query_with_metrics, site)
 

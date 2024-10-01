@@ -26,5 +26,16 @@ defmodule Plausible.Segment do
     |> cast(attrs, [:name, :description, :segment_data, :site_id])
     |> validate_required([:name, :segment_data, :site_id])
     |> foreign_key_constraint(:site_id)
+    |> validate_segment_data()
+  end
+
+  defp validate_segment_data(changeset) do
+    case get_field(changeset, :segment_data) do
+      %{"filters" => filters} when is_list(filters) ->
+        changeset
+
+      _ ->
+        add_error(changeset, :segment_data, "must contain property \"filters\" with array value")
+    end
   end
 end

@@ -52,6 +52,7 @@ defmodule Plausible.Stats.Filters.QueryParser do
          :ok <- validate_toplevel_only_filter_dimension(query),
          :ok <- validate_special_metrics_filters(query),
          :ok <- validate_filtered_goals_exist(query),
+         :ok <- validate_segments_allowed(site, query, %{}),
          :ok <- validate_metrics(query),
          :ok <- validate_include(query) do
       {:ok, query}
@@ -305,6 +306,10 @@ defmodule Plausible.Stats.Filters.QueryParser do
     end
   end
 
+  defp validate_segments_allowed(_site, _query, _user_scoped_segments) do
+    :ok
+  end
+
   defp validate_filtered_goals_exist(query) do
     # Note: Only works since event:goal is allowed as a top level filter
     goal_filter_clauses =
@@ -368,7 +373,7 @@ defmodule Plausible.Stats.Filters.QueryParser do
 
   defp validate_metric(metric, query) when metric in [:conversion_rate, :group_conversion_rate] do
     if Enum.member?(query.dimensions, "event:goal") or
-         Filters.filtering_on_dimension?(query, "event:goal") do
+         Filters.filtering_on_dimension?(query.filters, "event:goal") do
       :ok
     else
       {:error, "Metric `#{metric}` can only be queried with event:goal filters or dimensions."}
@@ -377,7 +382,7 @@ defmodule Plausible.Stats.Filters.QueryParser do
 
   defp validate_metric(:views_per_visit = metric, query) do
     cond do
-      Filters.filtering_on_dimension?(query, "event:page") ->
+      Filters.filtering_on_dimension?(query.filters, "event:page") ->
         {:error, "Metric `#{metric}` cannot be queried with a filter on `event:page`."}
 
       length(query.dimensions) > 0 ->

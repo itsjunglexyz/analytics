@@ -37,8 +37,8 @@ defmodule PlausibleWeb.Api.Internal.SegmentsControllerTest do
     test "creates segment successfully", %{conn: conn, site: site} do
       conn =
         post(conn, "/internal-api/#{site.domain}/segments", %{
-          "segment_data" => %{},
-          "name" => "should work"
+          "segment_data" => %{"filters" => []},
+          "name" => "any name"
         })
 
       response = json_response(conn, 200)
@@ -47,14 +47,18 @@ defmodule PlausibleWeb.Api.Internal.SegmentsControllerTest do
                "role" => "owner",
                "segment" => %{
                  "description" => nil,
-                 "name" => "should work",
-                 "segment_data" => %{}
+                 "name" => "any name",
+                 "segment_data" => %{"filters" => []}
                }
              } = response
 
-      assert is_binary(response["segment"]["inserted_at"])
-      assert is_binary(response["segment"]["updated_at"])
-      assert is_integer(response["segment"]["id"])
+      %{"segment" => %{"id" => id, "updated_at" => updated_at, "inserted_at" => inserted_at}} =
+        response
+
+      assert is_integer(id)
+      assert is_binary(inserted_at)
+      assert is_binary(updated_at)
+      assert ^inserted_at = updated_at
     end
   end
 
@@ -64,27 +68,25 @@ defmodule PlausibleWeb.Api.Internal.SegmentsControllerTest do
     test "updates segment successfully", %{conn: conn, site: site} do
       conn1 =
         post(conn, "/internal-api/#{site.domain}/segments", %{
-          "segment_data" => %{},
-          "name" => "should work"
+          "segment_data" => %{"filters" => []},
+          "name" => "any name"
         })
 
-      segment_id = json_response(conn1, 200)["segment"]["id"]
+      insert_response = json_response(conn1, 200)
+      %{"role" => role, "segment" => segment} = insert_response
+      %{"id" => id} = segment
 
       conn2 =
-        patch(conn, "/internal-api/#{site.domain}/segments/#{segment_id}", %{
-          "name" => "should overwrite"
+        patch(conn, "/internal-api/#{site.domain}/segments/#{id}", %{
+          "name" => "updated name"
         })
 
-      response = json_response(conn2, 200)
+      patch_response = json_response(conn2, 200)
 
-      assert %{
-               "role" => "owner",
-               "segment" => %{
-                 "description" => nil,
-                 "name" => "should overwrite",
-                 "segment_data" => %{}
-               }
-             } = response
+      assert ^patch_response = %{
+               "role" => role,
+               "segment" => %{segment | "name" => "updated name"}
+             }
     end
   end
 end

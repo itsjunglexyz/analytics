@@ -6,7 +6,21 @@ defmodule Plausible.Stats.Filters.FiltersParser do
   alias Plausible.Stats.Filters
   alias Plausible.Helpers.ListTraverse
 
-  defp i(value), do: inspect(value, charlists: :as_lists)
+  @segment_filter_key "segment"
+  def segment_filter_key(), do: @segment_filter_key
+
+  @filter_entry_operators [
+    :is,
+    :is_not,
+    :matches,
+    :matches_not,
+    :matches_wildcard,
+    :matches_wildcard_not,
+    :contains,
+    :contains_not
+  ]
+
+  @filter_tree_operators [:not, :and, :or]
 
   def parse_filters(filters) when is_list(filters) do
     ListTraverse.parse_list(filters, &parse_filter/1)
@@ -49,20 +63,11 @@ defmodule Plausible.Stats.Filters.FiltersParser do
   defp parse_filter_key(filter), do: {:error, "Invalid filter '#{i(filter)}'."}
 
   defp parse_filter_rest(operator, filter)
-       when operator in [
-              :is,
-              :is_not,
-              :matches,
-              :matches_not,
-              :matches_wildcard,
-              :matches_wildcard_not,
-              :contains,
-              :contains_not
-            ],
+       when operator in @filter_entry_operators,
        do: parse_clauses_list(filter)
 
   defp parse_filter_rest(operator, _filter)
-       when operator in [:not, :and, :or],
+       when operator in @filter_tree_operators,
        do: {:ok, []}
 
   defp parse_clauses_list([operation, filter_key, list] = filter) when is_list(list) do
@@ -81,7 +86,7 @@ defmodule Plausible.Stats.Filters.FiltersParser do
            "Invalid visit:country filter, visit:country needs to be a valid 2-letter country code."}
         end
 
-      {"segment", false} when all_integers? ->
+      {@segment_filter_key, false} when all_integers? ->
         {:ok, [list]}
 
       {_, true} ->
@@ -117,11 +122,13 @@ defmodule Plausible.Stats.Filters.FiltersParser do
           {:error, error_message}
         end
 
-      "segment" ->
+      @segment_filter_key ->
         {:ok, filter_key}
 
       _ ->
         {:error, error_message}
     end
   end
+
+  defp i(value), do: inspect(value, charlists: :as_lists)
 end
