@@ -5,6 +5,7 @@ defmodule Plausible.Stats.Breakdown do
   Avoid adding new logic here - update QueryBuilder etc instead.
   """
 
+  use Plausible.Repo
   use Plausible.ClickhouseRepo
   use Plausible
   use Plausible.Stats.SQL.Fragments
@@ -18,16 +19,28 @@ defmodule Plausible.Stats.Breakdown do
         %Query{dimensions: [dimension], order_by: order_by} = query,
         metrics,
         pagination,
-        _opts \\ []
+        opts \\ []
       ) do
+    get_available_segments = fn ->
+      case Keyword.get(opts, :conn) do
+        %{assigns: %{current_user: current_user}} ->
+          Repo.all(
+            from(i in Plausible.SegmentCollaborator,
+              join: segment in assoc(i, :segment),
+              select: {segment.id, segment},
+              where: i.user_id == ^current_user.id,
+              where: segment.site_id == ^site.id
+            )
+          )
+          |> Map.new()
+
+        _ ->
+          %{}
+      end
+    end
+
     transformed_metrics = transform_metrics(metrics, dimension)
     transformed_order_by = transform_order_by(order_by || [], dimension)
-
-    fake_segments =
-      Enum.into(
-        Enum.map(1..5, fn i -> {i, %{segment_data: %{filters: [["is", "visit:entry_page", ["/docs/#{i}"]]]}}} end),
-        %{}
-      )
 
     query_with_metrics =
       Query.set(
@@ -43,7 +56,7 @@ defmodule Plausible.Stats.Breakdown do
         # Allow pageview and event metrics to be queried off of sessions table
         legacy_breakdown: true
       )
-      |> QueryOptimizer.optimize(available_segments: fake_segments)
+      |> QueryOptimizer.optimize(get_available_segments: get_available_segments)
 
     q = SQL.QueryBuilder.build(query_with_metrics, site)
 

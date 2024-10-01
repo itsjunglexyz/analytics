@@ -172,7 +172,8 @@ defmodule Plausible.Stats.QueryOptimizer do
 
   defp expand_segments_to_filters(query, opts) do
     if Filters.Segments.has_segment_filters?(query.filters) do
-      available_segments = Keyword.fetch!(opts, :available_segments)
+      get_available_segments = Keyword.fetch!(opts, :get_available_segments)
+      available_segments = get_available_segments.()
 
       filters =
         Filters.Segments.expand_segments_to_constituent_filters(

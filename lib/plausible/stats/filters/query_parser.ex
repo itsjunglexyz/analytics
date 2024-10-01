@@ -306,7 +306,7 @@ defmodule Plausible.Stats.Filters.QueryParser do
     end
   end
 
-  defp validate_segments_allowed(_site, _query, _user_scoped_segments) do
+  defp validate_segments_allowed(_site, _query, _available_segments) do
     :ok
   end
 
