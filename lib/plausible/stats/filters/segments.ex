@@ -15,11 +15,11 @@ defmodule Plausible.Stats.Filters.Segments do
 
       _ ->
         {head, [segment_filter | tail]} = Enum.split(filters, segment_filter_index)
-        [_operator, _filter_key, clauses] = segment_filter
+        [_operator, _filter_key, segment_id_clauses] = segment_filter
 
         expanded_filters =
           Enum.concat(
-            Enum.map(clauses, fn segment_id ->
+            Enum.map(segment_id_clauses, fn segment_id ->
               with {:ok, segment_data} <- get_segment_data(segments, segment_id),
                    {:ok, %{filters: filters}} <-
                      validate_segment_data(segment_data) do
@@ -62,6 +62,7 @@ defmodule Plausible.Stats.Filters.Segments do
   @spec validate_segment_data(list()) :: {:ok, list()} | {:error, :segment_invalid}
   def validate_segment_data(segment_data) do
     with {:ok, filters} <- FiltersParser.parse_filters(segment_data["filters"]),
+         # segments are not permitted within segments
          false <- has_segment_filters?(filters) do
       {:ok, %{filters: filters}}
     else

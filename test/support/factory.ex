@@ -344,6 +344,14 @@ defmodule Plausible.Factory do
     }
   end
 
+  def segment_factory do
+    %Plausible.Segment{}
+  end
+
+  def segment_collaborator_factory do
+    %Plausible.SegmentCollaborator{}
+  end
+
   defp hash_key() do
     Keyword.fetch!(
       Application.get_env(:plausible, PlausibleWeb.Endpoint),
