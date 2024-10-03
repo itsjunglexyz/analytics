@@ -12,8 +12,7 @@ defmodule Plausible.Segment do
            only: [
              :id,
              :name,
-             :description,
-             :visible_in_site_segments,
+             :personal,
              :segment_data,
              :owner_id,
              :inserted_at,
@@ -22,9 +21,8 @@ defmodule Plausible.Segment do
 
   schema "segments" do
     field :name, :string
-    field :description, :string
     field :segment_data, :map
-    field :visible_in_site_segments, :boolean
+    field :personal, :boolean
     belongs_to :owner, Plausible.Auth.User, foreign_key: :owner_id
     belongs_to :site, Plausible.Site
 
@@ -35,13 +33,12 @@ defmodule Plausible.Segment do
     segment
     |> cast(attrs, [
       :name,
-      :description,
       :segment_data,
       :site_id,
-      :visible_in_site_segments,
+      :personal,
       :owner_id
     ])
-    |> validate_required([:name, :segment_data, :site_id, :visible_in_site_segments, :owner_id])
+    |> validate_required([:name, :segment_data, :site_id, :personal, :owner_id])
     |> foreign_key_constraint(:site_id)
     |> foreign_key_constraint(:owner_id)
     |> validate_segment_data()

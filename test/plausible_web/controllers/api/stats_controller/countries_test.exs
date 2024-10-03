@@ -349,7 +349,7 @@ defmodule PlausibleWeb.Api.StatsController.CountriesTest do
           site_id: site.id,
           owner_id: user.id,
           name: "Ireland and Britain (excl London)",
-          visible_in_site_segments: true,
+          personal: false,
           segment_data: %{
             "filters" => [
               ["is", "visit:country", ["IE", "GB"]],
@@ -363,7 +363,7 @@ defmodule PlausibleWeb.Api.StatsController.CountriesTest do
           site_id: site.id,
           owner_id: user.id,
           name: "Entered on root or Blog",
-          visible_in_site_segments: true,
+          personal: true,
           segment_data: %{
             "filters" => [
               ["is", "visit:entry_page", ["/", "/blog"]]

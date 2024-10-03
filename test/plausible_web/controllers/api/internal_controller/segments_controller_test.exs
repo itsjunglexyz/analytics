@@ -37,7 +37,7 @@ defmodule PlausibleWeb.Api.Internal.SegmentsControllerTest do
         insert(:segment,
           site: other_site,
           owner_id: user.id,
-          visible_in_site_segments: true,
+          personal: false,
           name: "any",
           segment_data: %{"filters" => [["is", "visit:entry_page", ["/blog"]]]}
         )
@@ -64,7 +64,7 @@ defmodule PlausibleWeb.Api.Internal.SegmentsControllerTest do
         id: segment_id
       } =
         insert(:segment,
-          visible_in_site_segments: false,
+          personal: true,
           owner_id: other_user.id,
           site: site,
           name: "any",
@@ -95,7 +95,7 @@ defmodule PlausibleWeb.Api.Internal.SegmentsControllerTest do
         id: segment_id
       } =
         insert(:segment,
-          visible_in_site_segments: true,
+          personal: false,
           owner_id: other_user.id,
           site: site,
           name: "any",
@@ -111,8 +111,7 @@ defmodule PlausibleWeb.Api.Internal.SegmentsControllerTest do
                "id" => segment_id,
                "owner_id" => other_user.id,
                "name" => "any",
-               "visible_in_site_segments" => true,
-               "description" => nil,
+               "personal" => false,
                "segment_data" => %{"filters" => [["is", "visit:entry_page", ["/blog"]]]},
                "inserted_at" => inserted_at,
                "updated_at" => updated_at
@@ -132,7 +131,7 @@ defmodule PlausibleWeb.Api.Internal.SegmentsControllerTest do
           site: site,
           name: "any",
           owner_id: user.id,
-          visible_in_site_segments: false,
+          personal: true,
           segment_data: %{"filters" => [["is", "visit:entry_page", ["/blog"]]]},
           inserted_at: inserted_at,
           updated_at: updated_at
@@ -145,8 +144,7 @@ defmodule PlausibleWeb.Api.Internal.SegmentsControllerTest do
                "id" => segment_id,
                "owner_id" => user.id,
                "name" => "any",
-               "visible_in_site_segments" => false,
-               "description" => nil,
+               "personal" => true,
                "segment_data" => %{"filters" => [["is", "visit:entry_page", ["/blog"]]]},
                "inserted_at" => inserted_at,
                "updated_at" => updated_at
@@ -162,7 +160,7 @@ defmodule PlausibleWeb.Api.Internal.SegmentsControllerTest do
 
       conn =
         post(conn, "/internal-api/#{site.domain}/segments", %{
-          "visible_in_site_segments" => "true",
+          "personal" => "false",
           "segment_data" => %{"filters" => [["is", "visit:entry_page", ["/blog"]]]},
           "name" => "any name"
         })
@@ -172,12 +170,12 @@ defmodule PlausibleWeb.Api.Internal.SegmentsControllerTest do
              }
     end
 
-    for %{role: role, visible_in_site_segments: visible_in_site_segments} <- [
-          %{role: :viewer, visible_in_site_segments: false},
-          %{role: :admin, visible_in_site_segments: false},
-          %{role: :admin, visible_in_site_segments: true}
+    for %{role: role, personal: personal} <- [
+          %{role: :viewer, personal: true},
+          %{role: :admin, personal: true},
+          %{role: :admin, personal: false}
         ] do
-      test "#{role} can create segment with visible_in_site_segments \"#{visible_in_site_segments}\" successfully",
+      test "#{role} can create segment with personal \"#{personal}\" successfully",
            %{conn: conn, user: user} do
         site =
           insert(:site, memberships: [build(:site_membership, user: user, role: unquote(role))])
@@ -186,7 +184,7 @@ defmodule PlausibleWeb.Api.Internal.SegmentsControllerTest do
 
         conn =
           post(conn, "/internal-api/#{site.domain}/segments", %{
-            "visible_in_site_segments" => unquote(visible_in_site_segments),
+            "personal" => unquote(personal),
             "segment_data" => %{"filters" => [["is", "visit:entry_page", ["/blog"]]]},
             "name" => name
           })
@@ -194,10 +192,9 @@ defmodule PlausibleWeb.Api.Internal.SegmentsControllerTest do
         response = json_response(conn, 200)
 
         assert %{
-                 "description" => nil,
                  "name" => ^name,
                  "segment_data" => %{"filters" => [["is", "visit:entry_page", ["/blog"]]]},
-                 "visible_in_site_segments" => unquote(visible_in_site_segments)
+                 "personal" => unquote(personal)
                } = response
 
         %{
@@ -220,53 +217,59 @@ defmodule PlausibleWeb.Api.Internal.SegmentsControllerTest do
   describe "PATCH /internal-api/:domain/segments/:segment_id" do
     setup [:create_user, :create_new_site, :log_in]
 
-    test "prevents viewers from updating segments to site segments", %{
-      conn: conn,
-      user: user
-    } do
-      site = insert(:site, memberships: [build(:site_membership, user: user, role: :viewer)])
-      inserted_at = "2024-09-01T10:00:00"
-      updated_at = inserted_at
+    for {current_personal, patch_personal} <- [
+          {true, false},
+          {false, true},
+          {true, -1},
+          {true, 0}
+        ] do
+      test "prevents viewers from updating segments with current personal value #{current_personal} with #{patch_personal}",
+           %{
+             conn: conn,
+             user: user
+           } do
+        site = insert(:site, memberships: [build(:site_membership, user: user, role: :viewer)])
+        inserted_at = "2024-09-01T10:00:00"
+        updated_at = inserted_at
 
-      %{id: segment_id} =
-        insert(:segment,
-          site: site,
-          name: "foo",
-          visible_in_site_segments: false,
-          owner_id: user.id,
-          segment_data: %{"filters" => [["is", "visit:entry_page", ["/blog"]]]},
-          inserted_at: inserted_at,
-          updated_at: updated_at
-        )
+        %{id: segment_id} =
+          insert(:segment,
+            site: site,
+            name: "foo",
+            personal: unquote(current_personal),
+            owner_id: user.id,
+            segment_data: %{"filters" => [["is", "visit:entry_page", ["/blog"]]]},
+            inserted_at: inserted_at,
+            updated_at: updated_at
+          )
 
-      conn =
-        patch(conn, "/internal-api/#{site.domain}/segments/#{segment_id}", %{
-          "name" => "updated name",
-          "visible_in_site_segments" => true
-        })
+        conn =
+          patch(conn, "/internal-api/#{site.domain}/segments/#{segment_id}", %{
+            "name" => "updated name",
+            "personal" => unquote(patch_personal)
+          })
 
-      assert json_response(conn, 403) == %{
-               "error" => "Not enough permissions to set segment visibility"
-             }
+        assert json_response(conn, 403) == %{
+                 "error" => "Not enough permissions to set segment visibility"
+               }
+      end
     end
 
     test "updates segment successfully", %{conn: conn, user: user} do
       site = insert(:site, memberships: [build(:site_membership, user: user, role: :admin)])
 
       name = "foo"
-      description = "bar"
       segment_data = %{"filters" => [["is", "visit:entry_page", ["/blog"]]]}
       inserted_at = "2024-09-01T10:00:00"
       updated_at = inserted_at
-      visible_in_site_segments = false
+      personal = false
 
       %{id: segment_id, owner_id: owner_id} =
         insert(:segment,
           site: site,
           name: name,
-          visible_in_site_segments: visible_in_site_segments,
+          personal: personal,
           owner_id: user.id,
-          description: description,
           segment_data: segment_data,
           inserted_at: inserted_at,
           updated_at: updated_at
@@ -275,7 +278,7 @@ defmodule PlausibleWeb.Api.Internal.SegmentsControllerTest do
       conn =
         patch(conn, "/internal-api/#{site.domain}/segments/#{segment_id}", %{
           "name" => "updated name",
-          "visible_in_site_segments" => !visible_in_site_segments
+          "personal" => !personal
         })
 
       response = json_response(conn, 200)
@@ -284,12 +287,11 @@ defmodule PlausibleWeb.Api.Internal.SegmentsControllerTest do
                "owner_id" => ^owner_id,
                "inserted_at" => ^inserted_at,
                "id" => ^segment_id,
-               "description" => ^description,
                "segment_data" => ^segment_data
              } = response
 
       assert response["name"] == "updated name"
-      assert response["visible_in_site_segments"] == !visible_in_site_segments
+      assert response["personal"] == !personal
       assert response["updated_at"] != inserted_at
     end
   end

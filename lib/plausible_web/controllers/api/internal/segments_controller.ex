@@ -21,7 +21,7 @@ defmodule PlausibleWeb.Api.Internal.SegmentsController do
       from(segment in Plausible.Segment,
         where: segment.site_id == ^site_id,
         where: segment.id == ^segment_id,
-        where: segment.visible_in_site_segments == true or segment.owner_id == ^user_id
+        where: segment.personal == false or segment.owner_id == ^user_id
       )
 
     Repo.one(query)
@@ -31,8 +31,7 @@ defmodule PlausibleWeb.Api.Internal.SegmentsController do
     fields_in_index = [
       :id,
       :name,
-      :description,
-      :visible_in_site_segments,
+      :personal,
       :inserted_at,
       :updated_at,
       :owner_id
@@ -41,7 +40,7 @@ defmodule PlausibleWeb.Api.Internal.SegmentsController do
     from(segment in Plausible.Segment,
       select: ^fields_in_index,
       where: segment.site_id == ^site_id,
-      where: segment.visible_in_site_segments == true or segment.owner_id == ^user_id
+      where: segment.personal == false or segment.owner_id == ^user_id
     )
   end
 
@@ -80,7 +79,7 @@ defmodule PlausibleWeb.Api.Internal.SegmentsController do
 
     changeset = Plausible.Segment.changeset(%Plausible.Segment{}, segment_definition)
 
-    if changeset.changes.visible_in_site_segments == true and
+    if changeset.changes.personal == false and
          not has_capability_to_toggle_site_segment?(conn.assigns.current_user_role) do
       H.not_enough_permissions(conn, "Not enough permissions to create site segments")
     else
@@ -101,7 +100,7 @@ defmodule PlausibleWeb.Api.Internal.SegmentsController do
     site_id = conn.assigns.site.id
     segment_id = normalize_segment_id_param(params["segment_id"])
 
-    if not is_nil(params["visible_in_site_segments"]) and
+    if not is_nil(params["personal"]) and
          not has_capability_to_toggle_site_segment?(conn.assigns.current_user_role) do
       H.not_enough_permissions(conn, "Not enough permissions to set segment visibility")
     else
