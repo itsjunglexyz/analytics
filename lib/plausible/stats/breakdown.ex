@@ -19,25 +19,9 @@ defmodule Plausible.Stats.Breakdown do
         %Query{dimensions: [dimension], order_by: order_by} = query,
         metrics,
         pagination,
-        opts \\ []
+        _opts \\ []
       ) do
-    get_available_segments = fn ->
-      case Keyword.get(opts, :conn) do
-        %{assigns: %{current_user: current_user}} ->
-          Repo.all(
-            from(i in Plausible.SegmentCollaborator,
-              join: segment in assoc(i, :segment),
-              select: {segment.id, segment},
-              where: i.user_id == ^current_user.id,
-              where: segment.site_id == ^site.id
-            )
-          )
-          |> Map.new()
-
-        _ ->
-          %{}
-      end
-    end
+    get_available_segments = fn -> Repo.preload(site, :segments).segments end
 
     transformed_metrics = transform_metrics(metrics, dimension)
     transformed_order_by = transform_order_by(order_by || [], dimension)

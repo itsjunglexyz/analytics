@@ -9,23 +9,41 @@ defmodule Plausible.Segment do
   @type t() :: %__MODULE__{}
 
   @derive {Jason.Encoder,
-           only: [:id, :name, :description, :segment_data, :inserted_at, :updated_at]}
+           only: [
+             :id,
+             :name,
+             :description,
+             :visible_in_site_segments,
+             :segment_data,
+             :owner_id,
+             :inserted_at,
+             :updated_at
+           ]}
 
   schema "segments" do
     field :name, :string
     field :description, :string
     field :segment_data, :map
+    field :visible_in_site_segments, :boolean
+    belongs_to :owner, Plausible.Auth.User, foreign_key: :owner_id
     belongs_to :site, Plausible.Site
-    many_to_many :users, Plausible.Auth.User, join_through: Plausible.SegmentCollaborator
 
     timestamps()
   end
 
   def changeset(segment, attrs) do
     segment
-    |> cast(attrs, [:name, :description, :segment_data, :site_id])
-    |> validate_required([:name, :segment_data, :site_id])
+    |> cast(attrs, [
+      :name,
+      :description,
+      :segment_data,
+      :site_id,
+      :visible_in_site_segments,
+      :owner_id
+    ])
+    |> validate_required([:name, :segment_data, :site_id, :visible_in_site_segments, :owner_id])
     |> foreign_key_constraint(:site_id)
+    |> foreign_key_constraint(:owner_id)
     |> validate_segment_data()
   end
 

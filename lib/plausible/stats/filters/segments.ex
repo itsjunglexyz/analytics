@@ -6,7 +6,7 @@ defmodule Plausible.Stats.Filters.Segments do
   def has_segment_filters?(filters),
     do: Filters.filtering_on_dimension?(filters, FiltersParser.segment_filter_key())
 
-  @spec expand_segments_to_constituent_filters(list(), map()) ::
+  @spec expand_segments_to_constituent_filters(list(), list()) ::
           {:ok, list()} | {:error, any()}
   def expand_segments_to_constituent_filters(filters, segments) do
     case segment_filter_index = find_top_level_segment_filter_index(filters) do
@@ -51,11 +51,11 @@ defmodule Plausible.Stats.Filters.Segments do
     end)
   end
 
-  @spec get_segment_data(map(), integer()) :: {:ok, list()} | {:error, :segment_not_found}
+  @spec get_segment_data(list(), integer()) :: {:ok, list()} | {:error, :segment_not_found}
   defp get_segment_data(segments, segment_id) do
-    case Map.fetch(segments, segment_id) do
-      {:ok, %{segment_data: segment_data}} -> {:ok, segment_data}
-      _ -> {:error, :segment_not_found}
+    case Enum.find(segments, fn segment -> segment.id == segment_id end) do
+      nil -> {:error, :segment_not_found}
+      %Plausible.Segment{segment_data: segment_data} -> {:ok, segment_data}
     end
   end
 

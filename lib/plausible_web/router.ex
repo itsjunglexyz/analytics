@@ -174,11 +174,6 @@ defmodule PlausibleWeb.Router do
     post "/:domain/segments", SegmentsController, :create_segment
     patch "/:domain/segments/:segment_id", SegmentsController, :update_segment
     delete "/:domain/segments/:segment_id", SegmentsController, :delete_segment
-
-    # get "/:domain/segments/:segment_id/collaborators", SegmentsController, :get_segment_collaborators
-    # post "/:domain/segments/:segment_id/collaborators", SegmentsController, :add_segment_collaborator
-    # put "/:domain/segments/:segment_id/collaborators/:collaborator_id", SegmentsController, :update_segment_collaborator
-    # delete "/:domain/segments/:segment_id/collaborators/:collaborator_id", SegmentsController, :delete_segment_collaborator
   end
 
   scope "/api/stats", PlausibleWeb.Api do

@@ -17,73 +17,82 @@ defmodule PlausibleWeb.Api.Internal.SegmentsController do
   end
 
   defp get_one_segment(user_id, site_id, segment_id) do
-    Repo.one(
-      from(i in Plausible.SegmentCollaborator,
-        join: segment in assoc(i, :segment),
-        select: %{role: i.role, segment: segment},
-        where: i.user_id == ^user_id,
+    query =
+      from(segment in Plausible.Segment,
         where: segment.site_id == ^site_id,
-        where: segment.id == ^segment_id
+        where: segment.id == ^segment_id,
+        where: segment.visible_in_site_segments == true or segment.owner_id == ^user_id
       )
+
+    Repo.one(query)
+  end
+
+  defp get_index_query(user_id, site_id) do
+    fields_in_index = [
+      :id,
+      :name,
+      :description,
+      :visible_in_site_segments,
+      :inserted_at,
+      :updated_at,
+      :owner_id
+    ]
+
+    from(segment in Plausible.Segment,
+      select: ^fields_in_index,
+      where: segment.site_id == ^site_id,
+      where: segment.visible_in_site_segments == true or segment.owner_id == ^user_id
     )
   end
 
+  defp has_capability_to_toggle_site_segment?(current_user_role) do
+    current_user_role in [:admin, :owner, :super_admin]
+  end
+
   def get_all_segments(conn, _params) do
-    user_id = conn.assigns.current_user.id
     site_id = conn.assigns.site.id
+    user_id = conn.assigns.current_user.id
 
-    segment_collaborators_query =
-      from(i in Plausible.SegmentCollaborator,
-        join: segment in assoc(i, :segment),
-        select: %{role: i.role, segment: segment},
-        where: i.user_id == ^user_id,
-        where: segment.site_id == ^site_id
-      )
-
-    result = Repo.all(segment_collaborators_query)
+    result = Repo.all(get_index_query(user_id, site_id))
 
     json(conn, result)
   end
 
   def get_segment(conn, params) do
-    user_id = conn.assigns.current_user.id
     site_id = conn.assigns.site.id
+    user_id = conn.assigns.current_user.id
     segment_id = normalize_segment_id_param(params["segment_id"])
 
     result = get_one_segment(user_id, site_id, segment_id)
 
     case result do
       nil -> H.not_found(conn, "Segment not found with ID #{inspect(params["segment_id"])}")
-      %{role: :owner} -> json(conn, result)
+      %{} -> json(conn, result)
     end
   end
 
   def create_segment(conn, params) do
     user_id = conn.assigns.current_user.id
     site_id = conn.assigns.site.id
-    segment_definition = Map.merge(params, %{"site_id" => site_id})
 
-    result =
-      Ecto.Multi.new()
-      |> Ecto.Multi.insert(
-        :segment,
-        Plausible.Segment.changeset(%Plausible.Segment{}, segment_definition)
-      )
-      |> Ecto.Multi.insert(:segment_collaboration, fn %{segment: segment} ->
-        Plausible.SegmentCollaborator.changeset(%Plausible.SegmentCollaborator{}, %{
-          role: :owner,
-          segment_id: segment.id,
-          user_id: user_id
-        })
-      end)
-      |> Repo.transaction()
+    segment_definition =
+      Map.merge(params, %{"site_id" => site_id, "owner_id" => user_id})
 
-    case result do
-      {:ok, %{segment: segment, segment_collaboration: segment_collaboration}} ->
-        json(conn, %{segment: segment, role: segment_collaboration.role})
+    changeset = Plausible.Segment.changeset(%Plausible.Segment{}, segment_definition)
 
-      {:error, _} ->
-        H.bad_request(conn, "Failed to create segment")
+    if changeset.changes.visible_in_site_segments == true and
+         not has_capability_to_toggle_site_segment?(conn.assigns.current_user_role) do
+      H.not_enough_permissions(conn, "Not enough permissions to create site segments")
+    else
+      result = Repo.insert(changeset)
+
+      case result do
+        {:ok, segment} ->
+          json(conn, segment)
+
+        {:error, _} ->
+          H.bad_request(conn, "Failed to create segment")
+      end
     end
   end
 
@@ -92,19 +101,24 @@ defmodule PlausibleWeb.Api.Internal.SegmentsController do
     site_id = conn.assigns.site.id
     segment_id = normalize_segment_id_param(params["segment_id"])
 
-    existing = get_one_segment(user_id, site_id, segment_id)
+    if not is_nil(params["visible_in_site_segments"]) and
+         not has_capability_to_toggle_site_segment?(conn.assigns.current_user_role) do
+      H.not_enough_permissions(conn, "Not enough permissions to set segment visibility")
+    else
+      existing_segment = get_one_segment(user_id, site_id, segment_id)
 
-    case existing do
-      nil ->
-        H.not_found(conn, "Segment not found with ID #{inspect(params["segment_id"])}")
+      case existing_segment do
+        nil ->
+          H.not_found(conn, "Segment not found with ID #{inspect(params["segment_id"])}")
 
-      %{role: :owner} ->
-        updated_segment =
-          Repo.update!(Plausible.Segment.changeset(existing.segment, params),
-            returning: true
-          )
+        %{} ->
+          updated_segment =
+            Repo.update!(Plausible.Segment.changeset(existing_segment, params),
+              returning: true
+            )
 
-        json(conn, %{role: existing.role, segment: updated_segment})
+          json(conn, updated_segment)
+      end
     end
   end
 
@@ -113,15 +127,15 @@ defmodule PlausibleWeb.Api.Internal.SegmentsController do
     site_id = conn.assigns.site.id
     segment_id = normalize_segment_id_param(params["segment_id"])
 
-    existing = get_one_segment(user_id, site_id, segment_id)
+    existing_segment = get_one_segment(user_id, site_id, segment_id)
 
-    case existing do
+    case existing_segment do
       nil ->
         H.not_found(conn, "Segment not found with ID #{inspect(params["segment_id"])}")
 
-      %{role: :owner} ->
-        Repo.delete!(existing.segment)
-        json(conn, existing)
+      %{} ->
+        Repo.delete!(existing_segment)
+        json(conn, existing_segment)
     end
   end
 end
