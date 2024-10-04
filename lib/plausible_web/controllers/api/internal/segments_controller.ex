@@ -40,7 +40,8 @@ defmodule PlausibleWeb.Api.Internal.SegmentsController do
     from(segment in Plausible.Segment,
       select: ^fields_in_index,
       where: segment.site_id == ^site_id,
-      where: segment.personal == false or segment.owner_id == ^user_id
+      where: segment.personal == false or segment.owner_id == ^user_id,
+      order_by: [asc: segment.name]
     )
   end
 
@@ -128,13 +129,18 @@ defmodule PlausibleWeb.Api.Internal.SegmentsController do
 
     existing_segment = get_one_segment(user_id, site_id, segment_id)
 
-    case existing_segment do
-      nil ->
-        H.not_found(conn, "Segment not found with ID #{inspect(params["segment_id"])}")
+    if not existing_segment.personal and
+         not has_capability_to_toggle_site_segment?(conn.assigns.current_user_role) do
+      H.not_enough_permissions(conn, "Not enough permissions to delete site segments")
+    else
+      case existing_segment do
+        nil ->
+          H.not_found(conn, "Segment not found with ID #{inspect(params["segment_id"])}")
 
-      %{} ->
-        Repo.delete!(existing_segment)
-        json(conn, existing_segment)
+        %{} ->
+          Repo.delete!(existing_segment)
+          json(conn, existing_segment)
+      end
     end
   end
 end

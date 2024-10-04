@@ -20,7 +20,7 @@
 | Can set personal segments to be site segments |  | ❓ | ✅ | ✅ | ✅ |
 | Can set site segments to be personal segments |  | ❓ | ✅ | ✅ | ✅ |
 | Can see list of personal segments |  | ✅ | ✅ | ✅ | ✅ |
-| Can see list of site segments | ✅ | ✅ | ✅ | ✅ | ✅ |
+| Can see list of site segments | ❓ | ✅ | ✅ | ✅ | ✅ |
 | Can see contents of personal segments |  | ✅ | ✅ | ✅ | ✅ |
 | Can see contents of site segments | ❓ | ❓ | ✅ | ✅ | ✅ |
 | Can edit personal segments |  | ✅ | ✅ | ✅ | ✅ |
@@ -28,13 +28,13 @@
 | Can delete personal segments |  | ✅ | ✅ | ✅ | ✅ |
 | Can delete site segments |  | ❓ | ✅ | ✅ | ✅ |
 | Can list personal segments of other users [1] |  |  | ❓ | ❓ | ❓ |
-| Can see contents of personal segments of other users [1] |  |  | ❓ | ❓ | ❓ |
+| Can see contents of personal segments of other users [1] | ❓ | ❓ | ❓ | ❓ | ❓ |
 | Can edit personal segments of other users [1] |  |  | ❓ | ❓ | ❓ |
 | Can delete personal segments of other users [1] |  |  | ❓ | ❓ | ❓ |
 
 ### Notes
 
-__[1]__: maybe needed for elevated roles to be able to take control of segments of deleted / inactive / vacationing users, or to toggle whether such segments are site segments or not
+__[1]__: maybe needed for elevated roles to be able to take control of segments of inactive / vacationing users, or to toggle whether such segments are site segments or not
 
 ## Segment lifecycle
 
