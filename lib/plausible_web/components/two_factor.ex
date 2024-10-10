@@ -2,7 +2,8 @@ defmodule PlausibleWeb.Components.TwoFactor do
   @moduledoc """
   Reusable components specific to 2FA
   """
-  use Phoenix.Component
+  use Phoenix.Component, global_prefixes: ~w(x-)
+  import PlausibleWeb.Components.Generic
 
   attr :text, :string, required: true
   attr :scale, :integer, default: 4
@@ -24,26 +25,44 @@ defmodule PlausibleWeb.Components.TwoFactor do
   attr :form, :any, required: true
   attr :field, :any, required: true
   attr :class, :string, default: ""
+  attr :show_button?, :boolean, default: true
 
   def verify_2fa_input(assigns) do
+    input_class =
+      "font-mono tracking-[0.5em] w-36 pl-5 font-medium shadow-sm focus:ring-indigo-500 focus:border-indigo-500 block border-gray-300 dark:border-gray-500 dark:text-gray-200 dark:bg-gray-900 rounded-l-md"
+
+    input_class =
+      if assigns.show_button? do
+        input_class
+      else
+        [input_class, "rounded-r-md"]
+      end
+
+    assigns = assign(assigns, :input_class, input_class)
+
     ~H"""
-    <div class={[@class, "flex justify-center sm:justify-start"]}>
+    <div class={[@class, "flex items-center"]}>
       <%= Phoenix.HTML.Form.text_input(@form, @field,
         autocomplete: "off",
-        class:
-          "font-mono tracking-[0.5em] w-36 pl-5 font-medium shadow-sm focus:ring-indigo-500 focus:border-indigo-500 block border-gray-300 dark:border-gray-500 dark:text-gray-200 dark:bg-gray-900 rounded-l-md",
+        class: @input_class,
         oninput:
-          "this.value=this.value.replace(/[^0-9]/g, ''); if (this.value.length >= 6) document.getElementById('verify-button').focus()",
+          if @show_button? do
+            "this.value=this.value.replace(/[^0-9]/g, ''); if (this.value.length >= 6) document.getElementById('#{@id}').focus()"
+          else
+            "this.value=this.value.replace(/[^0-9]/g, '');"
+          end,
         onclick: "this.select();",
-        oninvalid: "document.getElementById('verify-button').disabled = false",
+        oninvalid: @show_button? && "document.getElementById('#{@id}').disabled = false",
         maxlength: "6",
         placeholder: "••••••",
         value: "",
         required: "required"
       ) %>
       <PlausibleWeb.Components.Generic.button
+        :if={@show_button?}
         type="submit"
         id={@id}
+        mt?={false}
         class="rounded-l-none [&>span.label-enabled]:block [&>span.label-disabled]:hidden [&[disabled]>span.label-enabled]:hidden [&[disabled]>span.label-disabled]:block"
       >
         <span class="label-enabled pointer-events-none">
@@ -138,13 +157,14 @@ defmodule PlausibleWeb.Components.TwoFactor do
             </div>
             <div class="bg-gray-50 dark:bg-gray-850 px-4 py-3 sm:px-9 sm:flex sm:flex-row-reverse">
               <%= render_slot(@buttons) %>
-              <button
+              <.button
                 type="button"
-                class="sm:mr-2 mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 dark:border-gray-500 shadow-sm px-4 py-2 bg-white dark:bg-gray-800 text-base font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-850 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm"
                 x-on:click={"#{@state_param} = false"}
+                class="w-full sm:w-auto mr-2"
+                theme="bright"
               >
                 Cancel
-              </button>
+              </.button>
             </div>
           <% end %>
         </div>

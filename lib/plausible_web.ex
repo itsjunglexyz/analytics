@@ -13,6 +13,8 @@ defmodule PlausibleWeb do
 
       alias PlausibleWeb.Router.Helpers, as: Routes
       alias Phoenix.LiveView.JS
+
+      import PlausibleWeb.Components.Generic
     end
   end
 
@@ -42,6 +44,7 @@ defmodule PlausibleWeb do
       import PlausibleWeb.ErrorHelpers
       import PlausibleWeb.FormHelpers
       import PlausibleWeb.Components.Generic
+      import PlausibleWeb.Live.Components.Form
       alias PlausibleWeb.Router.Helpers, as: Routes
     end
   end

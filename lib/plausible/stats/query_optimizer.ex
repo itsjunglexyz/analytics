@@ -13,6 +13,8 @@ defmodule Plausible.Stats.QueryOptimizer do
     1. Figures out what the right granularity to group by time is
     2. Adds a missing order_by clause to a query
     3. Updating "time" dimension in order_by to the right granularity
+    4. Updates event:hostname filters to also apply on visit level for sane results.
+    5. Removes revenue metrics from dashboard queries if not requested, present or unavailable for the site.
 
   """
   def optimize(query, opts \\ []) do
@@ -33,7 +35,11 @@ defmodule Plausible.Stats.QueryOptimizer do
       |> TableDecider.partition_metrics(query)
 
     {
-      Query.set(query, metrics: event_metrics, include_imported: query.include_imported),
+      Query.set(query,
+        metrics: event_metrics,
+        include_imported: query.include_imported,
+        pagination: nil
+      ),
       split_sessions_query(query, sessions_metrics)
     }
   end
@@ -44,7 +50,8 @@ defmodule Plausible.Stats.QueryOptimizer do
       &update_group_by_time/2,
       &add_missing_order_by/2,
       &update_time_in_order_by/2,
-      &extend_hostname_filters_to_visit/2
+      &extend_hostname_filters_to_visit/2,
+      &remove_revenue_metrics_if_unavailable/2
     ]
   end
 
@@ -166,7 +173,8 @@ defmodule Plausible.Stats.QueryOptimizer do
       filters: filters,
       metrics: session_metrics,
       dimensions: dimensions,
-      include_imported: query.include_imported
+      include_imported: query.include_imported,
+      pagination: nil
     )
   end
 
@@ -185,5 +193,19 @@ defmodule Plausible.Stats.QueryOptimizer do
     else
       query
     end
+  end
+
+  on_ee do
+    defp remove_revenue_metrics_if_unavailable(query, _opts) do
+      if query.remove_unavailable_revenue_metrics and map_size(query.revenue_currencies) == 0 do
+        Query.set(query,
+          metrics: query.metrics -- Plausible.Stats.Goal.Revenue.revenue_metrics()
+        )
+      else
+        query
+      end
+    end
+  else
+    defp remove_revenue_metrics_if_unavailable(query, _opts), do: query
   end
 end
