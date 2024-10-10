@@ -14,7 +14,8 @@ export const FILTER_MODAL_TO_FILTER_GROUP = {
   utm: ['utm_medium', 'utm_source', 'utm_campaign', 'utm_term', 'utm_content'],
   goal: ['goal'],
   props: ['props'],
-  hostname: ['hostname']
+  hostname: ['hostname'],
+  segment: ['segment']
 }
 
 export const FILTER_GROUP_TO_MODAL_TYPE = Object.fromEntries(
@@ -74,11 +75,11 @@ try {
 const ESCAPED_PIPE = '\\|'
 
 export function getLabel(labels, filterKey, value) {
-  if (['country', 'region', 'city'].includes(filterKey)) {
+  if (['country', 'region', 'city', 'segment'].includes(filterKey)) {
     return labels[value]
-  } else {
-    return value
-  }
+  } 
+  
+  return value
 }
 
 export function getPropertyKeyFromFilterKey(filterKey) {
@@ -226,18 +227,22 @@ export function cleanLabels(filters, labels, mergedFilterKey, mergedLabels) {
   return result
 }
 
-const EVENT_FILTER_KEYS = new Set(['name', 'page', 'goal', 'hostname'])
+
+function remapFilterKey(filterKey) {
+  const EVENT_FILTER_KEYS = new Set(['name', 'page', 'goal', 'hostname'])
+  const NO_PREFIX_KEYS = new Set(['segment'])
+  if (NO_PREFIX_KEYS.has(filterKey)) {
+    return filterKey
+  }
+  if (EVENT_FILTER_KEYS.has(filterKey)) {
+    return `event:${filterKey}`
+  }
+  return `visit:${filterKey}`
+}
 
 export function serializeApiFilters(filters) {
   const apiFilters = filters.map(([operation, filterKey, clauses]) => {
-    let apiFilterKey = `visit:${filterKey}`
-    if (
-      filterKey.startsWith(EVENT_PROPS_PREFIX) ||
-      EVENT_FILTER_KEYS.has(filterKey)
-    ) {
-      apiFilterKey = `event:${filterKey}`
-    }
-    return [operation, apiFilterKey, clauses]
+    return [operation, remapFilterKey(filterKey), clauses]
   })
 
   return JSON.stringify(apiFilters)
@@ -291,7 +296,8 @@ export const formattedFilters = {
   page: 'Page',
   hostname: 'Hostname',
   entry_page: 'Entry Page',
-  exit_page: 'Exit Page'
+  exit_page: 'Exit Page',
+  segment: 'Segment'
 }
 
 export function parseLegacyFilter(filterKey, rawValue) {

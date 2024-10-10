@@ -1,11 +1,21 @@
-import React, { Fragment, useEffect, useState } from 'react';
-import { useQueryContext } from './query-context';
-import { useSiteContext } from './site-context';
-import { filterRoute } from './router';
-import { AppNavigationLink, useAppNavigate } from './navigation/use-app-navigate';
-import { AdjustmentsVerticalIcon, MagnifyingGlassIcon, XMarkIcon, PencilSquareIcon } from '@heroicons/react/20/solid';
-import classNames from 'classnames';
-import { Menu, Transition } from '@headlessui/react';
+/** @format */
+
+import React, { Fragment, useEffect, useState } from 'react'
+import { useQueryContext } from './query-context'
+import { useSiteContext } from './site-context'
+import { filterRoute } from './router'
+import {
+  AppNavigationLink,
+  useAppNavigate
+} from './navigation/use-app-navigate'
+import {
+  AdjustmentsVerticalIcon,
+  MagnifyingGlassIcon,
+  XMarkIcon,
+  PencilSquareIcon
+} from '@heroicons/react/20/solid'
+import classNames from 'classnames'
+import { Menu, Transition } from '@headlessui/react'
 
 import {
   FILTER_GROUP_TO_MODAL_TYPE,
@@ -15,12 +25,14 @@ import {
   EVENT_PROPS_PREFIX,
   plainFilterText,
   styledFilterText
-} from "./util/filters";
+} from './util/filters'
 
 const WRAPSTATE = { unwrapped: 0, waiting: 1, wrapped: 2 }
 
 function removeFilter(filterIndex, navigate, query) {
-  const newFilters = query.filters.filter((_filter, index) => filterIndex != index)
+  const newFilters = query.filters.filter(
+    (_filter, index) => filterIndex != index
+  )
   const newLabels = cleanLabels(newFilters, query.labels)
 
   navigate({
@@ -42,25 +54,30 @@ function clearAllFilters(navigate) {
   })
 }
 
-function AppliedFilterPillVertical({filterIndex, filter}) {
-  const { query } = useQueryContext();
-  const navigate = useAppNavigate();
+function AppliedFilterPillVertical({ filterIndex, filter }) {
+  const { query } = useQueryContext()
+  const navigate = useAppNavigate()
   const [_operation, filterKey, _clauses] = filter
 
   const type = filterKey.startsWith(EVENT_PROPS_PREFIX) ? 'props' : filterKey
 
   return (
     <Menu.Item key={filterIndex}>
-      <div className="px-3 md:px-4 sm:py-2 py-3 text-sm leading-tight flex items-center justify-between" key={filterIndex}>
+      <div
+        className="px-3 md:px-4 sm:py-2 py-3 text-sm leading-tight flex items-center justify-between"
+        key={filterIndex}
+      >
         <AppNavigationLink
           title={`Edit filter: ${plainFilterText(query, filter)}`}
           path={filterRoute.path}
-          params={{field: FILTER_GROUP_TO_MODAL_TYPE[type]}}
+          params={{ field: FILTER_GROUP_TO_MODAL_TYPE[type] }}
           search={(search) => search}
           className="group flex w-full justify-between items-center"
           style={{ width: 'calc(100% - 1.5rem)' }}
         >
-          <span className="inline-block w-full truncate">{styledFilterText(query, filter)}</span>
+          <span className="inline-block w-full truncate">
+            {styledFilterText(query, filter)}
+          </span>
           <PencilSquareIcon className="w-4 h-4 ml-1 cursor-pointer group-hover:text-indigo-700 dark:group-hover:text-indigo-500" />
         </AppNavigationLink>
         <b
@@ -75,16 +92,18 @@ function AppliedFilterPillVertical({filterIndex, filter}) {
   )
 }
 
-function OpenFilterGroupOptionsButton({option}) {
+function OpenFilterGroupOptionsButton({ option }) {
   return (
     <Menu.Item>
       {({ active }) => (
         <AppNavigationLink
           path={filterRoute.path}
-          params={{field: option}}
+          params={{ field: option }}
           search={(search) => search}
           className={classNames(
-            active ? 'bg-gray-100 dark:bg-gray-900 text-gray-900 dark:text-gray-100' : 'text-gray-800 dark:text-gray-300',
+            active
+              ? 'bg-gray-100 dark:bg-gray-900 text-gray-900 dark:text-gray-100'
+              : 'text-gray-800 dark:text-gray-300',
             'block px-4 py-2 text-sm font-medium'
           )}
         >
@@ -96,26 +115,44 @@ function OpenFilterGroupOptionsButton({option}) {
 }
 
 function DropdownContent({ wrapped }) {
-  const navigate = useAppNavigate();
-  const site = useSiteContext();
-  const { query } = useQueryContext();
-  const [addingFilter, setAddingFilter] = useState(false);
+  const navigate = useAppNavigate()
+  const site = useSiteContext()
+  const { query } = useQueryContext()
+  const [addingFilter, setAddingFilter] = useState(false)
 
   if (wrapped === WRAPSTATE.unwrapped || addingFilter) {
     let filterModals = { ...FILTER_MODAL_TO_FILTER_GROUP }
     if (!site.propsAvailable) delete filterModals.props
 
-    return <>{Object.keys(filterModals).map((option) => <OpenFilterGroupOptionsButton key={option} option={option} />)}</>
+    return (
+      <>
+        {Object.keys(filterModals).map((option) => (
+          <OpenFilterGroupOptionsButton key={option} option={option} />
+        ))}
+      </>
+    )
   }
 
   return (
     <>
-      <div className="border-b border-gray-200 dark:border-gray-500 px-4 sm:py-2 py-3 text-sm leading-tight hover:text-indigo-700 dark:hover:text-indigo-500 hover:cursor-pointer" onClick={() => setAddingFilter(true)}>
+      <div
+        className="border-b border-gray-200 dark:border-gray-500 px-4 sm:py-2 py-3 text-sm leading-tight hover:text-indigo-700 dark:hover:text-indigo-500 hover:cursor-pointer"
+        onClick={() => setAddingFilter(true)}
+      >
         + Add filter
       </div>
-      {query.filters.map((filter, index) => <AppliedFilterPillVertical key={index} filterIndex={index} filter={filter}/>)}
+      {query.filters.map((filter, index) => (
+        <AppliedFilterPillVertical
+          key={index}
+          filterIndex={index}
+          filter={filter}
+        />
+      ))}
       <Menu.Item key="clear">
-        <div className="border-t border-gray-200 dark:border-gray-500 px-4 sm:py-2 py-3 text-sm leading-tight hover:text-indigo-700 dark:hover:text-indigo-500 hover:cursor-pointer" onClick={() => clearAllFilters(navigate)}>
+        <div
+          className="border-t border-gray-200 dark:border-gray-500 px-4 sm:py-2 py-3 text-sm leading-tight hover:text-indigo-700 dark:hover:text-indigo-500 hover:cursor-pointer"
+          onClick={() => clearAllFilters(navigate)}
+        >
           Clear All Filters
         </div>
       </Menu.Item>
@@ -124,8 +161,8 @@ function DropdownContent({ wrapped }) {
 }
 
 function Filters() {
-  const navigate = useAppNavigate();
-  const { query } = useQueryContext();
+  const navigate = useAppNavigate()
+  const { query } = useQueryContext()
 
   const [wrapped, setWrapped] = useState(WRAPSTATE.waiting)
   const [viewport, setViewport] = useState(1080)
@@ -138,7 +175,7 @@ function Filters() {
     return () => {
       window.removeEventListener('resize', handleResize, false)
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   useEffect(() => {
@@ -146,8 +183,10 @@ function Filters() {
   }, [query, viewport])
 
   useEffect(() => {
-    if (wrapped === WRAPSTATE.waiting) { updateDisplayMode() }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    if (wrapped === WRAPSTATE.waiting) {
+      updateDisplayMode()
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [wrapped])
 
   function handleResize() {
@@ -157,7 +196,7 @@ function Filters() {
   // Checks if the filter container is wrapping items
   function updateDisplayMode() {
     const container = document.getElementById('filters')
-    const children = container && [...container.childNodes] || []
+    const children = (container && [...container.childNodes]) || []
 
     // Always wrap on mobile
     if (query.filters.length > 0 && viewport <= 768) {
@@ -168,7 +207,7 @@ function Filters() {
     setWrapped(WRAPSTATE.unwrapped)
 
     // Check for different y value between all child nodes - this indicates a wrap
-    children.forEach(child => {
+    children.forEach((child) => {
       const currentChildY = child.getBoundingClientRect().top
       const firstChildY = children[0].getBoundingClientRect().top
       if (currentChildY !== firstChildY) {
@@ -177,8 +216,8 @@ function Filters() {
     })
   }
 
-  function AppliedFilterPillHorizontal({filterIndex, filter}) {
-    const { query } = useQueryContext();
+  function AppliedFilterPillHorizontal({ filterIndex, filter }) {
+    const { query } = useQueryContext()
     const [_operation, filterKey, _clauses] = filter
     const type = filterKey.startsWith(EVENT_PROPS_PREFIX) ? 'props' : filterKey
     return (
@@ -187,10 +226,12 @@ function Filters() {
           title={`Edit filter: ${plainFilterText(query, filter)}`}
           className="flex w-full h-full items-center py-2 pl-3"
           path={filterRoute.path}
-          params={{field: FILTER_GROUP_TO_MODAL_TYPE[type]}}
-          search={(search)=> search}
+          params={{ field: FILTER_GROUP_TO_MODAL_TYPE[type] }}
+          search={(search) => search}
         >
-          <span className="inline-block max-w-2xs md:max-w-xs truncate">{styledFilterText(query, filter)}</span>
+          <span className="inline-block max-w-2xs md:max-w-xs truncate">
+            {styledFilterText(query, filter)}
+          </span>
         </AppNavigationLink>
         <span
           title={`Remove filter: ${plainFilterText(query, filter)}`}
@@ -204,11 +245,14 @@ function Filters() {
   }
 
   function renderDropdownButton() {
-    if (wrapped === WRAPSTATE.wrapped) {
+    if (wrapped === false) {
       const filterCount = query.filters.length
       return (
         <>
-          <AdjustmentsVerticalIcon className="-ml-1 mr-1 h-4 w-4" aria-hidden="true" />
+          <AdjustmentsVerticalIcon
+            className="-ml-1 mr-1 h-4 w-4"
+            aria-hidden="true"
+          />
           {filterCount} Filter{filterCount === 1 ? '' : 's'}
         </>
       )
@@ -216,9 +260,13 @@ function Filters() {
 
     return (
       <>
-        <MagnifyingGlassIcon className="-ml-1 mr-1 h-4 w-4 md:h-4 md:w-4" aria-hidden="true" />
+        <MagnifyingGlassIcon
+          className="-ml-1 mr-1 h-4 w-4 md:h-4 md:w-4"
+          aria-hidden="true"
+        />
         {/* This would have been a good use-case for JSX! But in the interest of keeping the breakpoint width logic with TailwindCSS, this is a better long-term way to deal with it. */}
-        <span className="sm:hidden">Filter</span><span className="hidden sm:inline-block">Filter</span>
+        <span className="sm:hidden">Filter</span>
+        <span className="hidden sm:inline-block">Filter</span>
       </>
     )
   }
@@ -235,7 +283,10 @@ function Filters() {
         {({ open }) => (
           <>
             <div>
-              <Menu.Button onClick={trackFilterMenu} className="flex items-center text-xs md:text-sm font-medium leading-tight px-3 py-2 cursor-pointer ml-auto text-gray-500 dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-900 rounded">
+              <Menu.Button
+                onClick={trackFilterMenu}
+                className="flex items-center text-xs md:text-sm font-medium leading-tight px-3 py-2 cursor-pointer ml-auto text-gray-500 dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-900 rounded"
+              >
                 {renderDropdownButton()}
               </Menu.Button>
             </div>
@@ -265,17 +316,44 @@ function Filters() {
           </>
         )}
       </Menu>
-    );
+    )
   }
 
   function renderFilterList() {
     // The filters are rendered even when `wrapped === WRAPSTATE.waiting`.
     // Otherwise, if they don't exist in the DOM, we can't check whether
     // the flex-wrap is actually putting them on multiple lines.
-    if (wrapped !== WRAPSTATE.wrapped) {
+    if (true) {
       return (
-        <div id="filters" className="flex flex-wrap">
-          {query.filters.map((filter, index) => <AppliedFilterPillHorizontal key={index} filterIndex={index} filter={filter} />)}
+        <div className="flex items-center">
+          <div
+            id="filters"
+            className="flex flex-wrap rounded border-2 border-transparent has-[.save-as:hover]:border-neutral-100"
+          >
+            {query.filters.map((filter, index) => (
+              <AppliedFilterPillHorizontal
+                key={index}
+                filterIndex={index}
+                filter={filter}
+              />
+            ))}
+          </div>
+          {!!query.filters.length && (
+            <>
+              <AppNavigationLink
+                className=""
+                search={(search) => ({
+                  ...search,
+                  filters: null,
+                  labels: null
+                })}
+              >
+                <XMarkIcon className="w-4 h-4 stroke-4" />
+              </AppNavigationLink>
+              <div className="px-4">{'|'}</div>
+              <button className="save-as"> Save as </button>
+            </>
+          )}
         </div>
       )
     }
@@ -286,9 +364,10 @@ function Filters() {
   return (
     <>
       {renderFilterList()}
+
       {renderDropDown()}
     </>
   )
 }
 
-export default Filters;
+export default Filters
