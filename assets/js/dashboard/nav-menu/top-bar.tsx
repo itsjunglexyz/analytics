@@ -1,20 +1,21 @@
 /** @format */
 
-import React, { useRef } from 'react'
+import React, { ReactNode, useRef } from 'react'
 import SiteSwitcher from '../site-switcher'
 import { useSiteContext } from '../site-context'
 import { useUserContext } from '../user-context'
 import CurrentVisitors from '../stats/current-visitors'
 import QueryPeriodPicker from '../datepicker'
-import Filters from '../filters'
 import classNames from 'classnames'
 import { useInView } from 'react-intersection-observer'
+import { FilterMenu } from './filter-menu'
 
 interface TopBarProps {
   showCurrentVisitors: boolean
+  extraBar?: ReactNode
 }
 
-export function TopBar({ showCurrentVisitors }: TopBarProps) {
+export function TopBar({ showCurrentVisitors, extraBar }: TopBarProps) {
   const site = useSiteContext()
   const user = useUserContext()
   const tooltipBoundary = useRef(null)
@@ -31,7 +32,7 @@ export function TopBar({ showCurrentVisitors }: TopBarProps) {
             'sticky fullwidth-shadow bg-gray-50 dark:bg-gray-850'
         )}
       >
-        <div className="items-center w-full flex">
+        <div className="flex items-center w-full">
           <div className="flex items-center w-full" ref={tooltipBoundary}>
             <SiteSwitcher
               site={site}
@@ -41,10 +42,13 @@ export function TopBar({ showCurrentVisitors }: TopBarProps) {
             {showCurrentVisitors && (
               <CurrentVisitors tooltipBoundary={tooltipBoundary.current} />
             )}
-            <Filters />
+            <FilterMenu />
           </div>
           <QueryPeriodPicker />
         </div>
+        {!!extraBar && (
+          <div className="flex items-center w-full">{extraBar}</div>
+        )}
       </div>
     </>
   )

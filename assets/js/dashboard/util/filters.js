@@ -77,8 +77,8 @@ const ESCAPED_PIPE = '\\|'
 export function getLabel(labels, filterKey, value) {
   if (['country', 'region', 'city', 'segment'].includes(filterKey)) {
     return labels[value]
-  } 
-  
+  }
+
   return value
 }
 
@@ -203,7 +203,9 @@ export function cleanLabels(filters, labels, mergedFilterKey, mergedLabels) {
   const filteredBy = Object.fromEntries(
     filters
       .flatMap(([_operation, filterKey, clauses]) =>
-        ['country', 'region', 'city'].includes(filterKey) ? clauses : []
+        ['country', 'region', 'city', 'segment'].includes(filterKey)
+          ? clauses
+          : []
       )
       .map((value) => [value, true])
   )
@@ -216,7 +218,7 @@ export function cleanLabels(filters, labels, mergedFilterKey, mergedLabels) {
 
   if (
     mergedFilterKey &&
-    ['country', 'region', 'city'].includes(mergedFilterKey)
+    ['country', 'region', 'city', 'segment'].includes(mergedFilterKey)
   ) {
     result = {
       ...result,
@@ -226,7 +228,6 @@ export function cleanLabels(filters, labels, mergedFilterKey, mergedLabels) {
 
   return result
 }
-
 
 function remapFilterKey(filterKey) {
   const EVENT_FILTER_KEYS = new Set(['name', 'page', 'goal', 'hostname'])
@@ -240,12 +241,14 @@ function remapFilterKey(filterKey) {
   return `visit:${filterKey}`
 }
 
-export function serializeApiFilters(filters) {
-  const apiFilters = filters.map(([operation, filterKey, clauses]) => {
+export function remapToApiFilters(filters) {
+  return filters.map(([operation, filterKey, clauses]) => {
     return [operation, remapFilterKey(filterKey), clauses]
   })
+}
 
-  return JSON.stringify(apiFilters)
+export function serializeApiFilters(filters) {
+  return JSON.stringify(remapToApiFilters(filters))
 }
 
 export function fetchSuggestions(apiPath, query, input, additionalFilter) {

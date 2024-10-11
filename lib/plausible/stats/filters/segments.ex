@@ -1,4 +1,7 @@
 defmodule Plausible.Stats.Filters.Segments do
+  @moduledoc """
+    Module containing the business logic of segments
+  """
   alias Plausible.Stats.Filters
   alias Plausible.Stats.Filters.FiltersParser
 
@@ -7,7 +10,7 @@ defmodule Plausible.Stats.Filters.Segments do
     do: Filters.filtering_on_dimension?(filters, FiltersParser.segment_filter_key())
 
   @spec expand_segments_to_constituent_filters(list(), list()) ::
-          {:ok, list()} | {:error, any()}
+          list()
   def expand_segments_to_constituent_filters(filters, segments) do
     case segment_filter_index = find_top_level_segment_filter_index(filters) do
       nil ->
@@ -30,9 +33,6 @@ defmodule Plausible.Stats.Filters.Segments do
 
                 {:error, :segment_invalid} ->
                   raise "Segment invalid with id #{inspect(segment_id)}."
-
-                _ ->
-                  raise "Failed to expand segment to filters"
               end
             end)
           )
@@ -51,7 +51,7 @@ defmodule Plausible.Stats.Filters.Segments do
     end)
   end
 
-  @spec get_segment_data(list(), integer()) :: {:ok, list()} | {:error, :segment_not_found}
+  @spec get_segment_data(list(), integer()) :: {:ok, map()} | {:error, :segment_not_found}
   defp get_segment_data(segments, segment_id) do
     case Enum.find(segments, fn segment -> segment.id == segment_id end) do
       nil -> {:error, :segment_not_found}
@@ -59,7 +59,7 @@ defmodule Plausible.Stats.Filters.Segments do
     end
   end
 
-  @spec validate_segment_data(list()) :: {:ok, list()} | {:error, :segment_invalid}
+  @spec validate_segment_data(map()) :: {:ok, list()} | {:error, :segment_invalid}
   def validate_segment_data(segment_data) do
     with {:ok, filters} <- FiltersParser.parse_filters(segment_data["filters"]),
          # segments are not permitted within segments

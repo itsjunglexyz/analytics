@@ -68,23 +68,22 @@ test('user can open and close filters dropdown', async () => {
     )
   })
 
-  const toggleFilters = screen.getByRole('button', { name: /Filter/ })
+  const toggleFilters = screen.getByRole('button', { name: 'Filter' })
   await userEvent.click(toggleFilters)
-  expect(screen.queryAllByRole('menuitem').map((el) => el.textContent)).toEqual(
-    [
-      'Page',
-      'Source',
-      'Location',
-      'Screen size',
-      'Browser',
-      'Operating System',
-      'UTM tags',
-      'Goal',
-      'Hostname'
-    ]
-  )
+  expect(screen.queryAllByRole('link').map((el) => el.textContent)).toEqual([
+    'Page',
+    'Source',
+    'Location',
+    'Screen size',
+    'Browser',
+    'Operating System',
+    'UTM tags',
+    'Goal',
+    'Hostname',
+    'Segment'
+  ])
   await userEvent.click(toggleFilters)
-  expect(screen.queryAllByRole('menuitem')).toEqual([])
+  expect(screen.queryAllByRole('link')).toEqual([])
 })
 
 test('current visitors renders when visitors are present and disappears after visitors are null', async () => {

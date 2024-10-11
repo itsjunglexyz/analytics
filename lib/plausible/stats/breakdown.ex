@@ -18,8 +18,6 @@ defmodule Plausible.Stats.Breakdown do
         {limit, page},
         _opts \\ []
       ) do
-    get_available_segments = fn -> Repo.preload(site, :segments).segments end
-
     transformed_metrics = transform_metrics(metrics, dimension)
     transformed_order_by = transform_order_by(order_by || [], dimension)
 
@@ -39,7 +37,7 @@ defmodule Plausible.Stats.Breakdown do
         legacy_breakdown: true,
         remove_unavailable_revenue_metrics: true
       )
-      |> QueryOptimizer.optimize(get_available_segments: get_available_segments)
+      |> QueryOptimizer.optimize()
 
     QueryRunner.run(site, query_with_metrics)
     |> build_breakdown_result(query_with_metrics, metrics)

@@ -42,6 +42,7 @@ defmodule Plausible.Stats.Filters.QueryParser do
          {:ok, pagination} <- parse_pagination(Map.get(params, "pagination", %{})),
          {preloaded_goals, revenue_currencies} <-
            preload_needed_goals(site, metrics, filters, dimensions),
+         preloaded_segments = preload_needed_segments(site, filters),
          query = %{
            metrics: metrics,
            filters: filters,
@@ -52,7 +53,8 @@ defmodule Plausible.Stats.Filters.QueryParser do
            include: include,
            pagination: pagination,
            preloaded_goals: preloaded_goals,
-           revenue_currencies: revenue_currencies
+           revenue_currencies: revenue_currencies,
+           preloaded_segments: preloaded_segments
          },
          :ok <- validate_order_by(query),
          :ok <- validate_custom_props_access(site, query),
@@ -299,6 +301,14 @@ defmodule Plausible.Stats.Filters.QueryParser do
       end
     else
       :ok
+    end
+  end
+
+  def preload_needed_segments(site, filters) do
+    if Plausible.Stats.Filters.Segments.has_segment_filters?(filters) do
+      Plausible.Repo.preload(site, :segments).segments
+    else
+      []
     end
   end
 
