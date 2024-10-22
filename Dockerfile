@@ -2,7 +2,7 @@
 # platform specific, it makes sense to build it in the docker
 
 #### Builder
-FROM hexpm/elixir:1.17.1-erlang-27.0-alpine-3.20.1 AS buildcontainer
+FROM elixir:1.17 AS buildcontainer
 
 ARG MIX_ENV=ce
 
@@ -20,16 +20,21 @@ RUN mkdir /app
 WORKDIR /app
 
 # install build dependencies
-RUN apk add --no-cache git nodejs yarn python3 npm ca-certificates wget gnupg make gcc libc-dev brotli && \
-  npm install npm@latest -g
+RUN mkdir -p /root/nvm
+ENV NVM_DIR /root/nvm
+RUN apt-get update -y
+RUN apt-get install -y wget
+RUN wget -qO- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.1/install.sh | bash
+RUN /bin/bash -c "source ${NVM_DIR}/nvm.sh && nvm install 20 && nvm use 20"
+RUN DEBIAN_FRONTEND=noninteractive apt-get install -y git yarn python3 ca-certificates build-essential wget gnupg make gcc libc-dev brotli
 
 COPY mix.exs ./
 COPY mix.lock ./
 COPY config ./config
 RUN mix local.hex --force && \
   mix local.rebar --force && \
-  mix deps.get --only ${MIX_ENV} && \
-  mix deps.compile
+  mix deps.get
+RUN mix deps.compile
 
 COPY assets/package.json assets/package-lock.json ./assets/
 COPY tracker/package.json tracker/package-lock.json ./tracker/
@@ -54,7 +59,7 @@ COPY rel rel
 RUN mix release plausible
 
 # Main Docker Image
-FROM alpine:3.20.1
+FROM ubuntu
 LABEL maintainer="plausible.io <hello@plausible.io>"
 
 ARG BUILD_METADATA={}
@@ -62,12 +67,12 @@ ENV BUILD_METADATA=$BUILD_METADATA
 ENV LANG=C.UTF-8
 ARG MIX_ENV=ce
 ENV MIX_ENV=$MIX_ENV
+ENV DEBIAN_FRONTEND=noninteractive
+ENV TZ=America/Sao_Paulo
 
-RUN adduser -S -H -u 999 -G nogroup plausible
-
-RUN apk upgrade --no-cache
-RUN apk add --no-cache openssl ncurses libstdc++ libgcc ca-certificates \
-  && if [ "$MIX_ENV" = "ce" ]; then apk add --no-cache certbot; fi
+RUN apt-get update -y
+RUN DEBIAN_FRONTEND=noninteractive apt-get install -y snap openssl libncurses-dev build-essential
+RUN DEBIAN_FRONTEND=noninteractive apt-get install -y ca-certificates
 
 COPY --from=buildcontainer --chmod=555 /app/_build/${MIX_ENV}/rel/plausible /app
 COPY --chmod=755 ./rel/docker-entrypoint.sh /entrypoint.sh
@@ -76,7 +81,6 @@ COPY --chmod=755 ./rel/docker-entrypoint.sh /entrypoint.sh
 # docker container can be started with arbitrary uid
 RUN mkdir -p /var/lib/plausible && chmod ugo+rw -R /var/lib/plausible
 
-USER 999
 WORKDIR /app
 ENV LISTEN_IP=0.0.0.0
 ENTRYPOINT ["/entrypoint.sh"]
