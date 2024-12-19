@@ -4,7 +4,7 @@
 #### Builder
 FROM elixir:1.17 AS buildcontainer
 
-ARG MIX_ENV=ce
+ARG MIX_ENV=prod
 
 # preparation
 ENV MIX_ENV=$MIX_ENV
@@ -39,8 +39,7 @@ RUN mix deps.compile
 COPY assets/package.json assets/package-lock.json ./assets/
 COPY tracker/package.json tracker/package-lock.json ./tracker/
 
-RUN npm install --prefix ./assets && \
-  npm install --prefix ./tracker
+RUN /bin/bash -c "source ${NVM_DIR}/nvm.sh && nvm use 20 && npm install --prefix ./assets && npm install --prefix ./tracker"
 
 COPY assets ./assets
 COPY tracker ./tracker
@@ -48,11 +47,11 @@ COPY priv ./priv
 COPY lib ./lib
 COPY extra ./extra
 
-RUN npm run deploy --prefix ./tracker && \
+RUN /bin/bash -c "source ${NVM_DIR}/nvm.sh && nvm use 20 && npm run deploy --prefix ./tracker && \
   mix assets.deploy && \
   mix phx.digest priv/static && \
   mix download_country_database && \
-  mix sentry.package_source_code
+  mix sentry.package_source_code"
 
 WORKDIR /app
 COPY rel rel
@@ -60,12 +59,11 @@ RUN mix release plausible
 
 # Main Docker Image
 FROM ubuntu
-LABEL maintainer="plausible.io <hello@plausible.io>"
 
 ARG BUILD_METADATA={}
 ENV BUILD_METADATA=$BUILD_METADATA
 ENV LANG=C.UTF-8
-ARG MIX_ENV=ce
+ARG MIX_ENV=prod
 ENV MIX_ENV=$MIX_ENV
 ENV DEBIAN_FRONTEND=noninteractive
 ENV TZ=America/Sao_Paulo

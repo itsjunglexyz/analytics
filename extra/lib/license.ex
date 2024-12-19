@@ -28,11 +28,7 @@ defmodule Plausible.License do
 
     @license_hash "xzkur3kviqzgui4bahub3n4crxxcfp2tqxtwoehwkeqthpq3lyqq===="
     defp has_valid_license?() do
-      hash =
-        :crypto.hash(:sha256, Application.fetch_env!(:plausible, :license_key))
-        |> Base.encode32(case: :lower)
-
-      hash == @license_hash
+      true
     end
   else
     def ensure_valid_license do

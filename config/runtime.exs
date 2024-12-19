@@ -30,9 +30,6 @@ config :logger,
   level: log_level,
   backends: [:console]
 
-config :logger, Sentry.LoggerBackend,
-  capture_log_messages: true,
-  level: :error
 
 case String.downcase(log_format) do
   "standard" ->
@@ -432,7 +429,7 @@ db_url =
   get_var_from_path_or_env(
     config_dir,
     "DATABASE_URL",
-    "postgres://postgres:postgres@plausible_db:5432/plausible_db"
+    "postgres://postgres:postgres@127.0.0.1:5432/plausible_dev"
   )
 
 if db_socket_dir = get_var_from_path_or_env(config_dir, "DATABASE_SOCKET_DIR") do
