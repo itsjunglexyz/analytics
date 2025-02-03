@@ -14,7 +14,7 @@
 
     <script src="dist/handlebars.runtime-NWIB6V2M.js"></script>
     <script src="dist/handlebars.templates-43PMFBC7.js"></script>
-    <script src="dist/sidebar_items-A2CFCFB2.js"></script>
+    <script src="dist/sidebar_items-62E43205.js"></script>
 
       <script src="docs_config.js"></script>
 
@@ -187,6 +187,14 @@ to detect user errors early.</p>
 
     <div class="summary-row">
       <div class="summary-signature">
+        <a href="#build_many/2" translate="no">build_many(conn, now \\ NaiveDateTime.utc_now())</a>
+
+      </div>
+
+    </div>
+
+    <div class="summary-row">
+      <div class="summary-signature">
         <a href="#sanitize_hostname/1" translate="no">sanitize_hostname(hostname)</a>
 
       </div>
@@ -274,7 +282,7 @@ to detect user errors early.</p>
     </a>
     <h1 class="signature" translate="no">build(conn, now \\ NaiveDateTime.utc_now())</h1>
 
-      <a href="https://github.com/plausible/analytics/blob/main/lib/plausible/ingestion/request.ex#L60" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/plausible/analytics/blob/main/lib/plausible/ingestion/request.ex#L84" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
@@ -294,6 +302,30 @@ to detect user errors early.</p>
 <p>Builds and initially validates %Plausible.Ingestion.Request{} struct from %Plug.Conn{}.</p>
   </section>
 </section>
+<section class="detail" id="build_many/2">
+
+    <span id="build_many/1"></span>
+
+  <div class="detail-header">
+    <a href="#build_many/2" class="detail-link" title="Link to this function">
+      <i class="ri-link-m" aria-hidden="true"></i>
+      <span class="sr-only">Link to this function</span>
+    </a>
+    <h1 class="signature" translate="no">build_many(conn, now \\ NaiveDateTime.utc_now())</h1>
+
+      <a href="https://github.com/plausible/analytics/blob/main/lib/plausible/ingestion/request.ex#L102" class="icon-action" rel="help" title="View Source">
+       <i class="ri-code-s-slash-line" aria-hidden="true"></i>
+       <span class="sr-only">View Source</span>
+     </a>
+
+
+  </div>
+
+  <section class="docstring">
+
+
+  </section>
+</section>
 <section class="detail" id="sanitize_hostname/1">
 
   <div class="detail-header">
@@ -303,7 +335,7 @@ to detect user errors early.</p>
     </a>
     <h1 class="signature" translate="no">sanitize_hostname(hostname)</h1>
 
-      <a href="https://github.com/plausible/analytics/blob/main/lib/plausible/ingestion/request.ex#L294" class="icon-action" rel="help" title="View Source">
+      <a href="https://github.com/plausible/analytics/blob/main/lib/plausible/ingestion/request.ex#L329" class="icon-action" rel="help" title="View Source">
        <i class="ri-code-s-slash-line" aria-hidden="true"></i>
        <span class="sr-only">View Source</span>
      </a>
