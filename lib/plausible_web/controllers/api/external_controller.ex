@@ -42,6 +42,39 @@ defmodule PlausibleWeb.Api.ExternalController do
     end
   end
 
+  def bulk(conn, _params) do
+    with {:ok, request} <- Ingestion.Request.build_many(conn),
+         _ <- Sentry.Context.set_extra_context(%{request: request}) do
+      case Ingestion.Event.build_and_buffer_many(request) do
+        {:ok, %{dropped: [], buffered: _buffered}} ->
+          conn
+          |> put_status(202)
+          |> text("ok")
+
+        {:ok, %{dropped: dropped, buffered: _}} ->
+          first_invalid_changeset = find_first_invalid_changeset(dropped)
+
+          if first_invalid_changeset do
+            conn
+            |> put_resp_header("x-plausible-dropped", "#{Enum.count(dropped)}")
+            |> put_status(400)
+            |> json(%{errors: Plausible.ChangesetHelpers.traverse_errors(first_invalid_changeset)})
+          else
+            conn
+            |> put_resp_header("x-plausible-dropped", "#{Enum.count(dropped)}")
+            |> put_status(202)
+            |> text("ok")
+          end
+        _ -> conn |> put_status(500) |> text("error")
+      end
+    else
+      {:error, %Ecto.Changeset{} = changeset} ->
+        conn
+        |> put_status(400)
+        |> json(%{errors: Plausible.ChangesetHelpers.traverse_errors(changeset)})
+    end
+  end
+
   def error(conn, _params) do
     Sentry.capture_message("JS snippet error")
     send_resp(conn, 200, "")

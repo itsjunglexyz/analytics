@@ -76,6 +76,27 @@ defmodule Plausible.Ingestion.Event do
     {:ok, %{dropped: dropped, buffered: buffered}}
   end
 
+  defp unpack(content) do
+    case content do
+      {:ok, x} -> x
+      _ -> {:error}
+    end
+  end
+
+  defp single_event(content) do
+    case content do
+      %{dropped: [], buffered: buff} -> List.first(buff)
+      %{dropped: drop, buffered: []} -> List.first(drop)
+      _ -> {:error}
+    end
+  end
+
+  def build_and_buffer_many(requests, context \\ []) do
+    mapped_events = Enum.map(requests, fn {:ok, x} -> build_and_buffer(x, context) |> unpack |> single_event end)
+    {dropped, buffered} = Enum.split_with(mapped_events, fn x -> x.dropped? end)
+    {:ok, %{dropped: dropped, buffered: buffered}}
+  end
+
   @spec telemetry_event_buffered() :: [atom()]
   def telemetry_event_buffered() do
     [:plausible, :ingest, :event, :buffered]

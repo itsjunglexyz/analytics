@@ -254,6 +254,7 @@ defmodule PlausibleWeb.Router do
       pipe_through :external_api
 
       post "/event", Api.ExternalController, :event
+      post "/bulk", Api.ExternalController, :bulk
       get "/error", Api.ExternalController, :error
       get "/health", Api.ExternalController, :health
       get "/system", Api.ExternalController, :info

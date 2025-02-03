@@ -53,6 +53,30 @@ defmodule Plausible.Ingestion.Request do
 
   @type t() :: %__MODULE__{}
 
+  defp populate_changeset(conn, changeset, request_body) do
+    changeset
+    |> put_ip_classification(conn)
+    |> put_remote_ip(conn)
+    |> put_uri(request_body)
+    |> put_hostname()
+    |> put_user_agent(conn)
+    |> put_request_params(request_body)
+    |> put_referrer(request_body)
+    |> put_props(request_body)
+    |> put_pathname()
+    |> put_query_params()
+    |> put_revenue_source(request_body)
+    |> map_domains(request_body)
+    |> Changeset.validate_required([
+      :event_name,
+      :hostname,
+      :pathname,
+      :timestamp
+    ])
+    |> Changeset.validate_length(:event_name, max: 120)
+    |> Changeset.apply_action(nil)
+  end
+
   @spec build(Plug.Conn.t(), NaiveDateTime.t()) :: {:ok, t()} | {:error, Changeset.t()}
   @doc """
   Builds and initially validates %Plausible.Ingestion.Request{} struct from %Plug.Conn{}.
@@ -68,30 +92,26 @@ defmodule Plausible.Ingestion.Request do
 
     case parse_body(conn) do
       {:ok, request_body} ->
-        changeset
-        |> put_ip_classification(conn)
-        |> put_remote_ip(conn)
-        |> put_uri(request_body)
-        |> put_hostname()
-        |> put_user_agent(conn)
-        |> put_request_params(request_body)
-        |> put_referrer(request_body)
-        |> put_props(request_body)
-        |> put_pathname()
-        |> put_query_params()
-        |> put_revenue_source(request_body)
-        |> map_domains(request_body)
-        |> Changeset.validate_required([
-          :event_name,
-          :hostname,
-          :pathname,
-          :timestamp
-        ])
-        |> Changeset.validate_length(:event_name, max: 120)
-        |> Changeset.apply_action(nil)
+        populate_changeset(conn, changeset, request_body)
 
       {:error, :invalid_json} ->
         {:error, Changeset.add_error(changeset, :request, "Unable to parse request body as json")}
+    end
+  end
+
+  def build_many(%Plug.Conn{} = conn, now \\ NaiveDateTime.utc_now()) do
+    changeset =
+      %__MODULE__{}
+      |> Changeset.change()
+      |> Changeset.put_change(
+           :timestamp,
+           NaiveDateTime.truncate(now, :second)
+         )
+    case parse_array_body(conn) do
+      {:ok, array_request_body} ->
+        {:ok, Enum.map(array_request_body["_json"], fn x -> populate_changeset(conn, changeset, x) end)}
+      {:error, :invalid_json} ->
+        {:error, "Unable to parse request body as json"}
     end
   end
 
@@ -114,6 +134,21 @@ defmodule Plausible.Ingestion.Request do
 
         case Jason.decode(body) do
           {:ok, params} when is_map(params) -> {:ok, params}
+          _ -> {:error, :invalid_json}
+        end
+
+      params ->
+        {:ok, params}
+    end
+  end
+
+  defp parse_array_body(conn) do
+    case conn.body_params do
+      %Plug.Conn.Unfetched{} ->
+        {:ok, body, _conn} = Plug.Conn.read_body(conn)
+
+        case Jason.decode(body) do
+          {:ok, params} when is_list(params) -> {:ok, params}
           _ -> {:error, :invalid_json}
         end
 
